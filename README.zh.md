@@ -30,11 +30,11 @@ gradlew.bat build
 
 ## CI / 发布
 
-GitHub Actions 在每次推送时构建；推送 `v*` 标签时自动发布 **GitHub Release**（含构建出的 jar）。见 [`.github/workflows/build.yml`](.github/workflows/build.yml)。
+GitHub Actions 在每次推送时构建；自动发布 **GitHub Release**（含构建出的 jar）。见 [`.github/workflows/build.yml`](.github/workflows/build.yml)。
 
 ## 发布到 Modrinth
 
-许可为 **MIT**，在 Modrinth 上同样设为 MIT 即可。打 `v*` 标签发布并附上构建的 jar（或用 CI 上传）。
+许可为 **MIT**，在 Modrinth 上同样为 MIT 。
 
 ## 许可 / 第三方声明
 
