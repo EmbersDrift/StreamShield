@@ -1,19 +1,24 @@
+**[English](README.md) | [简体中文](README.zh.md)**
+
 # StreamShield
 
-A **Minecraft (Fabric, 1.21.11) client mod** that keeps stream content safe. It anonymizes player names, normalizes item names, rewrites scoreboard/keyword content, obfuscates skins, and provides an OBS overlay layer so sensitive HUD info never leaks to your stream.
+A **Minecraft (Fabric, 1.21.11) client mod** that keeps your stream safe. It anonymizes player names, normalizes item names, rewrites scoreboard/keyword content, obfuscates skins, and provides an OBS overlay layer so sensitive HUD info never leaks to your stream.
 
-> 一个直播安全的 Minecraft (Fabric, 1.21.11) 客户端模组：匿名化玩家名、归一化物品名、重写计分板关键词、遮蔽皮肤，并提供 OBS 遮罩层，让敏感 HUD 信息不会泄露到直播画面。
+## Features
 
-## Features / 功能
-
-- **Name anonymization** — real player names become `[Player]+#0000` (your own name can be HIDE / CUSTOM / RANDOM).
+- **Name anonymization** — real player names become `[Player]+#0000` (your own name can be `HIDE` / `CUSTOM` / `RANDOM`).
 - **Item name normalization** — renamed items display their registry name.
-- **Content redaction** — keyword/regex + auto-grab server IP & name.
+- **Content redaction** — keyword/regex matching + auto-grab of the server's IP & name.
 - **Scoreboard mapping** — chain keyword → replacement rules.
 - **Skin obfuscation** — force Steve.
 - **OBS overlay** — hide/redirect HUD elements to a dedicated overlay target.
 
-## Build / 构建
+## Requirements
+
+- Minecraft **1.21.11** (Fabric loader) + Java **21**
+- Fabric API, Architectury, Cloth Config (see [`fabric.mod.json`](src/main/resources/fabric.mod.json))
+
+## Build
 
 Requires JDK 21.
 
@@ -21,14 +26,18 @@ Requires JDK 21.
 gradlew.bat build
 ```
 
-The built jar is at `build/libs/live-hider-1.0.0.jar`.
+The jar is output to `build/libs/live-hider-1.0.0.jar`.
 
-## License / 许可
+## CI / Releases
 
-This project is released under the **MIT License**. See [LICENSE](LICENSE).
+GitHub Actions builds on every push and, when a `v*` tag is pushed, publishes a **GitHub Release** with the built jar. See [`.github/workflows/build.yml`](.github/workflows/build.yml).
 
-## Third-party attribution / 第三方声明
+## Publishing to Modrinth
 
-This project **contains code ported from [OBS Overlay](https://github.com/zziger/obs-overlay)** by **zziger (Artem Dzhemesiuk)**, also licensed under the **MIT License**. In accordance with its terms, the original copyright notice and permission notice are reproduced in [NOTICE.txt](src/main/resources/NOTICE.txt) and bundled inside the jar. See also [Modrinth](https://modrinth.com/mod/obs-overlay).
+License is **MIT** — set it as such on Modrinth. Tag a `v*` release and attach the built jar (or use a CI upload).
 
-> 本项目包含对 [OBS Overlay](https://github.com/zziger/obs-overlay)（作者 zziger / Artem Dzhemesiuk，同样为 MIT 许可）代码的移植。按其许可要求，原始版权声明与许可文本见 [NOTICE.txt](src/main/resources/NOTICE.txt)，并已打包进 jar。
+## License / Attribution
+
+This project is released under the **MIT License**. See [`LICENSE`](LICENSE).
+
+It contains code ported from [OBS Overlay](https://github.com/zziger/obs-overlay) by **zziger (Artem Dzhemesiuk)**, also under the **MIT License**. In accordance with its terms, the original copyright notice and permission notice are reproduced in [`NOTICE.txt`](src/main/resources/NOTICE.txt) and [`licenses/OBS_OVERLAY_LICENSE.txt`](licenses/OBS_OVERLAY_LICENSE.txt), and are bundled inside the jar.
