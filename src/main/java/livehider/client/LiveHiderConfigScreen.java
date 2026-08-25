@@ -74,6 +74,8 @@ public final class LiveHiderConfigScreen {
             .setTooltip(t("live_hider.redact_preset.tooltip"))
             .setSaveConsumer(v -> config.redactPresetEnabled = v)
             .build());
+        // The string-list works by clicking "Add" then typing into the box below; make that explicit.
+        general.addEntry(e.startTextDescription(t("live_hider.redact_words.hint")).build());
         general.addEntry(e.startStrList(t("live_hider.redact_words"), config.redactPatterns)
             .setDefaultValue(new java.util.ArrayList<>())
             .setTooltip(t("live_hider.redact_words.tooltip"))
@@ -81,12 +83,6 @@ public final class LiveHiderConfigScreen {
                 config.redactPatterns = new java.util.ArrayList<>(v);
                 livehider.text.Redactor.setup();
             })
-            .build());
-        general.addEntry(e.startStringDropdownMenu(t("live_hider.skin_mode"), config.skinMode)
-            .setDefaultValue("OFF")
-            .setSelections(java.util.List.of("OFF", "STEVE"))
-            .setTooltip(t("live_hider.skin_mode.tooltip"))
-            .setSaveConsumer(v -> config.skinMode = v)
             .build());
         general.addEntry(e.startBooleanToggle(t("live_hider.debug_log"), config.debugLog)
             .setDefaultValue(false)
@@ -112,7 +108,7 @@ public final class LiveHiderConfigScreen {
             .build());
         names.addEntry(e.startStringDropdownMenu(t("live_hider.self_name_mode"), config.selfNameMode)
             .setDefaultValue("HIDE")
-            .setSelections(java.util.List.of("HIDE", "CUSTOM", "RANDOM"))
+            .setSelections(java.util.List.of("HIDE", "CUSTOM", "OWN", "RANDOM"))
             .setTooltip(t("live_hider.self_name_mode.tooltip"))
             .setSaveConsumer(v -> config.selfNameMode = v)
             .build());
@@ -125,6 +121,13 @@ public final class LiveHiderConfigScreen {
             .setDefaultValue(true)
             .setTooltip(t("live_hider.sanitize_chat.tooltip"))
             .setSaveConsumer(v -> config.sanitizeChatInput = v)
+            .build());
+        // Skin obfuscation grouped under names (it hides what a player's skin could reveal).
+        names.addEntry(e.startStringDropdownMenu(t("live_hider.skin_mode"), config.skinMode)
+            .setDefaultValue("OFF")
+            .setSelections(java.util.List.of("OFF", "STEVE"))
+            .setTooltip(t("live_hider.skin_mode.tooltip"))
+            .setSaveConsumer(v -> config.skinMode = v)
             .build());
 
         // ---- Items ----
@@ -143,6 +146,7 @@ public final class LiveHiderConfigScreen {
             .setTooltip(t("live_hider.scoreboard.enabled_group.tooltip"))
             .build());
         scoreboard.addEntry(e.startTextDescription(t("live_hider.scoreboard.desc")).build());
+        scoreboard.addEntry(e.startTextDescription(t("live_hider.scoreboard.disclaimer")).build());
         for (int i = 0; i < config.scoreboardRules.size(); i++) {
             ScoreboardRule rule = config.scoreboardRules.get(i);
             final int idx = i;

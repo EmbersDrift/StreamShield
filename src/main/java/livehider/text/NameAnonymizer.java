@@ -163,6 +163,10 @@ public final class NameAnonymizer {
         if ("CUSTOM".equalsIgnoreCase(config.selfNameMode)) {
             return Component.literal(config.selfCustomName);
         }
+        if ("OWN".equalsIgnoreCase(config.selfNameMode)) {
+            // Show the player's own real name unchanged (escape hatch to get back to normal).
+            return name;
+        }
         return SafeText.rewrite(name);
     }
 }
