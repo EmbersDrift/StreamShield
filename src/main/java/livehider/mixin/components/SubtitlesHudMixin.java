@@ -1,0 +1,20 @@
+package livehider.mixin.components;
+
+import livehider.LiveHider;
+import livehider.component.AllDefaultOverlayComponents;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.SubtitleOverlay;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
+
+/**
+ * Redirects accessibility subtitles onto the overlay target. Ported from obs-overlay (MIT, author zziger).
+ */
+@Mixin(SubtitleOverlay.class)
+public class SubtitlesHudMixin {
+    @ModifyVariable(method = "render(Lnet/minecraft/client/gui/GuiGraphics;)V", at = @At("HEAD"), argsOnly = true)
+    private GuiGraphics drawStart(GuiGraphics value) {
+        return LiveHider.getAPI().getGuiGraphics(AllDefaultOverlayComponents.subtitles, value);
+    }
+}

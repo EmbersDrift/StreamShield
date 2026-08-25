@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "live_hider",
+  "version": "${version}",
+  "name": "StreamShield",
+  "description": "A stream-safe display rewriter & OBS overlay: anonymizes player names, item names, scoreboards and HUD elements so your stream never leaks sensitive information.",
+  "authors": [
+    "EmbersDrift"
+  ],
+  "license": "MIT",
+  "icon": "assets/live_hider/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "livehider.LiveHiderClient"
+    ],
+    "modmenu": [
+      "livehider.client.LiveHiderModMenu"
+    ]
+  },
+  "mixins": [
+    "live_hider.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.18.6",
+    "minecraft": "1.21.11",
+    "java": ">=21",
+    "fabric-api": "*",
+    "architectury": ">=19.0.1",
+    "cloth-config": ">=21.11.153"
+  },
+  "suggests": {
+    "modmenu": "*"
+  }
+}

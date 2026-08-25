@@ -1,0 +1,22 @@
+# --- Gradle / build ---
+.gradle/
+build/
+out/
+
+# --- IDE ---
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# --- Fabric Loom runtime ---
+run/
+
+# --- Local reference material (decompiled upstream + private maven repo); not part of the build ---
+/reference/
+
+# --- OS ---
+.DS_Store
+Thumbs.db

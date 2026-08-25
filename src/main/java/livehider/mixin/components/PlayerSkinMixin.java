@@ -1,0 +1,28 @@
+package livehider.mixin.components;
+
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
+import com.mojang.authlib.GameProfile;
+import livehider.skin.SkinOverride;
+import net.minecraft.client.resources.SkinManager;
+import net.minecraft.world.entity.player.PlayerSkin;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+
+import java.util.function.Supplier;
+
+/**
+ * Skin obfuscation via {@code SkinManager.createLookup}, the shared spine both {@code PlayerInfo} and
+ * {@code PlayerSkinRenderCache} use to resolve a skin. {@code STEVE} mode returns a supplier yielding
+ * the default Steve skin — a real built-in resource, so it renders correctly.
+ */
+@Mixin(SkinManager.class)
+public class PlayerSkinMixin {
+    @ModifyReturnValue(method = "createLookup", at = @At("RETURN"))
+    private Supplier<PlayerSkin> overrideSkinLookup(Supplier<PlayerSkin> original, GameProfile profile, boolean secure) {
+        if (SkinOverride.isSteveActive()) {
+            PlayerSkin steve = SkinOverride.getSteveSkin();
+            return () -> steve;
+        }
+        return original;
+    }
+}
