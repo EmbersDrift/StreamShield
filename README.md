@@ -30,11 +30,11 @@ The jar is output to `build/libs/live-hider-1.0.0.jar`.
 
 ## CI / Releases
 
-GitHub Actions builds on every push and, when a `v*` tag is pushed, publishes a **GitHub Release** with the built jar. See [`.github/workflows/build.yml`](.github/workflows/build.yml).
+GitHub Actions builds on every push and,  publishes a **GitHub Release** with the built jar. See [`.github/workflows/build.yml`](.github/workflows/build.yml).
 
 ## Publishing to Modrinth
 
-License is **MIT** — set it as such on Modrinth. Tag a `v*` release and attach the built jar (or use a CI upload).
+License is **MIT**  on Modrinth.
 
 ## License / Attribution
 
