@@ -26,7 +26,7 @@
 gradlew.bat build
 ```
 
-产物在 `build/libs/live-hider-1.0.0.jar`。
+产物在 `build/libs/StreamShield-1.0.1.jar`。
 
 ## CI / 发布
 

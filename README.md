@@ -26,7 +26,7 @@ Requires JDK 21.
 gradlew.bat build
 ```
 
-The jar is output to `build/libs/live-hider-1.0.0.jar`.
+The jar is output to `build/libs/StreamShield-1.0.1.jar`.
 
 ## CI / Releases
 

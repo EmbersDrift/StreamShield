@@ -7,4 +7,4 @@ pluginManagement {
     }
 }
 
-rootProject.name = 'live-hider'
+rootProject.name = 'StreamShield'
