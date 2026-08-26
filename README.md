@@ -40,7 +40,7 @@ Requires JDK 21.
 gradlew.bat build
 ```
 
-The jar is output to `build/libs/[1.21.11]StreamShield-1.0.1.jar`.
+The jar is output to `build/libs/[1.21.11]StreamShield-1.1.0.jar`.
 
 ## CI / Releases
 
