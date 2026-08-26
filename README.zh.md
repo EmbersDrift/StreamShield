@@ -13,6 +13,20 @@
 - **皮肤遮蔽** — 强制所有人显示为史蒂夫。
 - **OBS 遮罩** — 把 HUD 元素隐藏/重定向到独立的遮罩目标。
 
+## 截图
+
+| 初始样式 | 玩家名匿名化 |
+| --- | --- |
+| ![初始样式](docs/default.jpg) | ![隐藏玩家名](docs/name-hiding.jpg) |
+
+| 皮肤遮蔽（Steve） | 自定义计分板 |
+| --- | --- |
+| ![皮肤遮蔽](docs/skin-hiding.jpg) | ![自定义计分板](docs/scoreboard.jpg) |
+
+| 物品名归一化 | OBS 遮罩（全部效果） |
+| --- | --- |
+| ![物品名归一化](docs/item-normalize.jpg) | ![OBS 遮罩](docs/overlay.jpg) |
+
 ## 运行要求
 
 - Minecraft **1.21.11**（Fabric 加载器）+ Java **21**

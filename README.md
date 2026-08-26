@@ -13,6 +13,20 @@ A **Minecraft (Fabric, 1.21.11) client mod** that keeps your stream safe. It ano
 - **Skin obfuscation** — force Steve.
 - **OBS overlay** — hide/redirect HUD elements to a dedicated overlay target.
 
+## Screenshots
+
+| Original | Name anonymization |
+| --- | --- |
+| ![Original](docs/default.jpg) | ![Hide player names](docs/name-hiding.jpg) |
+
+| Skin obfuscation (Steve) | Custom scoreboard |
+| --- | --- |
+| ![Skin obfuscation](docs/skin-hiding.jpg) | ![Custom scoreboard](docs/scoreboard.jpg) |
+
+| Item name normalization | OBS overlay (full) |
+| --- | --- |
+| ![Item name normalization](docs/item-normalize.jpg) | ![OBS overlay](docs/overlay.jpg) |
+
 ## Requirements
 
 - Minecraft **1.21.11** (Fabric loader) + Java **21**
