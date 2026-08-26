@@ -54,6 +54,13 @@ processResources {
 
 // Version-prefixed jar names, e.g. [26.1.2]StreamShield-1.1.0.jar, so builds for different
 // Minecraft versions can be told apart when uploading (Modrinth / GitHub releases).
-jar {
+// Loom overrides remapJar's file name after script evaluation, so force it in afterEvaluate.
+tasks.withType(Jar).configureEach {
     archiveFileName = "[${project.minecraft_version}]${project.archives_name}-${project.version}.jar"
+}
+afterEvaluate {
+    def remap = tasks.findByName('remapJar')
+    if (remap != null) {
+        remap.archiveFileName = "[${project.minecraft_version}]${project.archives_name}-${project.version}.jar"
+    }
 }
