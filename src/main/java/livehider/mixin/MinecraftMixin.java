@@ -20,7 +20,7 @@ public class MinecraftMixin {
         LiveHider.initRender();
     }
 
-    @Inject(method = "resizeDisplay()V", at = @At("RETURN"))
+    @Inject(method = "resizeGui()V", at = @At("RETURN"))
     private void onResolutionChanged(CallbackInfo ci) {
         OverlayRenderer renderer = LiveHider.getRenderer();
         if (renderer != null) {

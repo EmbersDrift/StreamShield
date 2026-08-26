@@ -2,7 +2,7 @@
 
 # StreamShield
 
-一个 **Minecraft (Fabric, 1.21.11) 客户端模组**，让你的直播画面更安全。它能匿名化玩家名、归一化物品名、重写计分板/关键词内容、遮蔽皮肤，并提供 OBS 遮罩层，让敏感 HUD 信息不会泄露到直播画面。
+一个 **Minecraft (Fabric, 26.1.2) 客户端模组**，让你的直播画面更安全。它能匿名化玩家名、归一化物品名、重写计分板/关键词内容、遮蔽皮肤，并提供 OBS 遮罩层，让敏感 HUD 信息不会泄露到直播画面。
 
 ## 功能
 
@@ -29,18 +29,18 @@
 
 ## 运行要求
 
-- Minecraft **1.21.11**（Fabric 加载器）+ Java **21**
+- Minecraft **26.1.2**（Fabric 加载器）+ Java **25**
 - Fabric API、Architectury、Cloth Config（见 [`fabric.mod.json`](src/main/resources/fabric.mod.json)）
 
 ## 构建
 
-需要 JDK 21。
+需要 JDK 25+（Java 26 亦可）。
 
 ```powershell
 gradlew.bat build
 ```
 
-产物在 `build/libs/StreamShield-1.0.1.jar`。
+产物在 `build/libs/StreamShield-1.1.0.jar`。
 
 ## CI / 发布
 

@@ -3,51 +3,53 @@ package livehider.mixin.components;
 import livehider.LiveHider;
 import livehider.component.AllDefaultOverlayComponents;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 /**
  * Redirects scoreboard/actionbar/title/effects/main-HUD onto the overlay target.
+ * 26.1 renamed the per-feature Gui draw methods to {@code extract*} and switched
+ * the draw context from GuiGraphics to GuiGraphicsExtractor.
  * Ported from obs-overlay (MIT, author zziger).
  */
 @Mixin(Gui.class)
 public class GuiMixin {
     @ModifyVariable(
-        method = "displayScoreboardSidebar(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/world/scores/Objective;)V",
+        method = "displayScoreboardSidebar(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/world/scores/Objective;)V",
         at = @At("HEAD"),
         argsOnly = true
     )
-    private GuiGraphics drawStartScoreboard(GuiGraphics value) {
+    private GuiGraphicsExtractor drawStartScoreboard(GuiGraphicsExtractor value) {
         return LiveHider.getAPI().getGuiGraphics(AllDefaultOverlayComponents.scoreboards, value);
     }
 
     @ModifyVariable(
-        method = "renderOverlayMessage(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V",
+        method = "extractOverlayMessage(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/DeltaTracker;)V",
         at = @At("HEAD"),
         argsOnly = true
     )
-    private GuiGraphics drawStartActionbar(GuiGraphics value) {
+    private GuiGraphicsExtractor drawStartActionbar(GuiGraphicsExtractor value) {
         return LiveHider.getAPI().getGuiGraphics(AllDefaultOverlayComponents.actionbar, value);
     }
 
-    @ModifyVariable(method = "renderTitle(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V", at = @At("HEAD"), argsOnly = true)
-    private GuiGraphics drawStartTitleSubtitle(GuiGraphics value) {
+    @ModifyVariable(method = "extractTitle(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/DeltaTracker;)V", at = @At("HEAD"), argsOnly = true)
+    private GuiGraphicsExtractor drawStartTitleSubtitle(GuiGraphicsExtractor value) {
         return LiveHider.getAPI().getGuiGraphics(AllDefaultOverlayComponents.titleSubtitle, value);
     }
 
-    @ModifyVariable(method = "renderEffects(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V", at = @At("HEAD"), argsOnly = true)
-    private GuiGraphics drawStartEffects(GuiGraphics value) {
+    @ModifyVariable(method = "extractEffects(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/DeltaTracker;)V", at = @At("HEAD"), argsOnly = true)
+    private GuiGraphicsExtractor drawStartEffects(GuiGraphicsExtractor value) {
         return LiveHider.getAPI().getGuiGraphics(AllDefaultOverlayComponents.effects, value);
     }
 
     @ModifyVariable(
-        method = "renderHotbarAndDecorations(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V",
+        method = "extractHotbarAndDecorations(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/DeltaTracker;)V",
         at = @At("HEAD"),
         argsOnly = true
     )
-    private GuiGraphics drawStartMainHud(GuiGraphics value) {
+    private GuiGraphicsExtractor drawStartMainHud(GuiGraphicsExtractor value) {
         return LiveHider.getAPI().getGuiGraphics(AllDefaultOverlayComponents.mainHud, value);
     }
 }

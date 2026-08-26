@@ -12,21 +12,21 @@ import java.util.OptionalInt;
 import livehider.component.IOverlayComponent;
 import livehider.mixin.accessor.GuiRendererAccessor;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.render.GuiRenderer;
-import net.minecraft.client.gui.render.state.GuiRenderState;
+import net.minecraft.client.renderer.state.gui.GuiRenderState;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * The 1.21.11 overlay renderer: draws redirected HUD components into an off-screen
- * target, then composited onto the screen at swap time so the player sees it but OBS
+ * The 26.1 overlay renderer: extracts redirected HUD components into an off-screen
+ * target, then composites it onto the screen at swap time so the player sees it but OBS
  * (which grabs the main target) does not. Ported from obs-overlay (MIT, author zziger).
  */
 public class OverlayRenderer implements Closeable {
     private boolean framebufferOverridden = false;
     private OverlayFramebuffer overlayFramebuffer;
     private final GuiRenderState overlayGuiState = new GuiRenderState();
-    private GuiGraphics overlayGuiGraphics;
+    private GuiGraphicsExtractor overlayGuiGraphics;
     private GuiRenderer overlayGuiRenderer;
 
     public OverlayRenderer() {
@@ -87,19 +87,19 @@ public class OverlayRenderer implements Closeable {
             : Minecraft.getInstance().getMainRenderTarget();
     }
 
-    public GuiGraphics getGuiGraphics() {
+    public GuiGraphicsExtractor getGuiGraphics() {
         return this.overlayGuiGraphics;
     }
 
     @NotNull
-    public GuiGraphics getGuiGraphics(IOverlayComponent component, GuiGraphics original) {
+    public GuiGraphicsExtractor getGuiGraphics(IOverlayComponent component, GuiGraphicsExtractor original) {
         if (!component.isOverlayEnabled()) {
             return original;
         }
         if (component.isHidden()) {
             return DummyGuiGraphics.INSTANCE;
         }
-        GuiGraphics guiGraphics = this.getGuiGraphics();
+        GuiGraphicsExtractor guiGraphics = this.getGuiGraphics();
         return guiGraphics != null ? guiGraphics : original;
     }
 
@@ -163,7 +163,7 @@ public class OverlayRenderer implements Closeable {
         int mouseX = (int) minecraft.mouseHandler.getScaledXPos(minecraft.getWindow());
         int mouseY = (int) minecraft.mouseHandler.getScaledYPos(minecraft.getWindow());
         this.overlayGuiState.reset();
-        this.overlayGuiGraphics = new GuiGraphics(minecraft, this.overlayGuiState, mouseX, mouseY);
+        this.overlayGuiGraphics = new GuiGraphicsExtractor(minecraft, this.overlayGuiState, mouseX, mouseY);
     }
 
     public void renderFrame() {

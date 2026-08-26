@@ -3,7 +3,7 @@ package livehider.api.impl;
 import livehider.api.IOverlayAPI;
 import livehider.component.IOverlayComponent;
 import livehider.overlay.OverlayRenderer;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * Live API backed by the overlay renderer. Ported from obs-overlay (MIT, author zziger).
@@ -16,12 +16,12 @@ public class NormalOverlayAPI implements IOverlayAPI {
     }
 
     @Override
-    public GuiGraphics getGuiGraphics(IOverlayComponent component, GuiGraphics original) {
+    public GuiGraphicsExtractor getGuiGraphics(IOverlayComponent component, GuiGraphicsExtractor original) {
         return this.renderer.getGuiGraphics(component, original);
     }
 
     @Override
-    public GuiGraphics getOverlayGuiGraphics() {
+    public GuiGraphicsExtractor getOverlayGuiGraphics() {
         return this.renderer.getGuiGraphics();
     }
 }

@@ -9,7 +9,7 @@ import livehider.mixin.accessor.GuiGraphicsAccessor;
 import livehider.overlay.OverlayRenderer;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.render.GuiRenderer;
 import net.minecraft.client.renderer.GameRenderer;
 import org.spongepowered.asm.mixin.Mixin;
@@ -33,11 +33,11 @@ public abstract class GameRendererMixin {
     private void renderTestIcon(DeltaTracker deltaTracker, boolean renderLevel, CallbackInfo ci) {
         if (LiveHiderConfig.get().showTestIcon && LiveHider.getIsInitialized()) {
             try {
-                GuiGraphics overlayGraphics = Objects.requireNonNull(LiveHider.getRenderer()).getGuiGraphics();
+                GuiGraphicsExtractor overlayGraphics = Objects.requireNonNull(LiveHider.getRenderer()).getGuiGraphics();
                 Minecraft mc = this.getMinecraft();
                 String lang = mc.getLanguageManager().getSelected();
                 String label = (lang != null && lang.startsWith("zh")) ? "屏幕测试" : "Screen Test";
-                overlayGraphics.drawString(mc.font, label, 2, 2, 0xFFFFFFFF, true);
+                overlayGraphics.text(mc.font, label, 2, 2, 0xFFFFFFFF, true);
             } catch (Exception ignored) {
             }
         }
@@ -64,11 +64,11 @@ public abstract class GameRendererMixin {
 
     @Inject(
         method = "render(Lnet/minecraft/client/DeltaTracker;Z)V",
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;applyCursor(Lcom/mojang/blaze3d/platform/Window;)V", shift = Shift.AFTER)
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;applyCursor(Lcom/mojang/blaze3d/platform/Window;)V", shift = Shift.AFTER)
     )
     private void fixCursor(DeltaTracker deltaTracker, boolean renderLevel, CallbackInfo ci) {
         if (LiveHider.getIsInitialized()) {
-            GuiGraphics guiGraphics = LiveHider.getAPI().getOverlayGuiGraphics();
+            GuiGraphicsExtractor guiGraphics = LiveHider.getAPI().getOverlayGuiGraphics();
             if (((GuiGraphicsAccessor) guiGraphics).getPendingCursor() != CursorType.DEFAULT) {
                 guiGraphics.applyCursor(this.getMinecraft().getWindow());
             }

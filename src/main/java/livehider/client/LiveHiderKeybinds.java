@@ -3,7 +3,7 @@ package livehider.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import livehider.text.NameAnonymizer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
@@ -18,7 +18,7 @@ public final class LiveHiderKeybinds {
     }
 
     public static void register() {
-        revealKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+        revealKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.live_hider.reveal",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_LEFT_ALT,

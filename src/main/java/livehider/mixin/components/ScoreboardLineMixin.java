@@ -9,10 +9,11 @@ import org.spongepowered.asm.mixin.injection.At;
 
 /**
  * Rewrites the assembled sidebar-row text. Each visible sidebar row is produced (in
- * {@code Gui.method_55439}) as {@code PlayerTeam.formatNameForTeam(team, ownerName())} and then
+ * {@code Gui.extractScoreboardSidebar}) as {@code PlayerTeam.formatNameForTeam(team, ownerName())} and then
  * stored into an immutable {@code Gui$1DisplayEntry} record — so the record's field cannot be
  * changed after construction. Instead we rewrite the value at its source: the
- * {@code formatNameForTeam} return, a writable normal method return.
+ * {@code formatNameForTeam} return, a writable normal method return. In 26.1 the first parameter
+ * type widened from {@code PlayerTeam} to {@code Team}.
  *
  * <p>We use {@link SafeText#rewriteScoreboardRecord} which rewrites only the plain-text leaves and
  * preserves the component structure/style, so server resource-pack icon siblings keep rendering as
@@ -21,7 +22,7 @@ import org.spongepowered.asm.mixin.injection.At;
  */
 @Mixin(PlayerTeam.class)
 public class ScoreboardLineMixin {
-    @ModifyReturnValue(method = "formatNameForTeam", at = @At("RETURN"))
+    @ModifyReturnValue(method = "formatNameForTeam(Lnet/minecraft/world/scores/Team;Lnet/minecraft/network/chat/Component;)Lnet/minecraft/network/chat/MutableComponent;", at = @At("RETURN"))
     private static MutableComponent rewriteRowText(MutableComponent original) {
         if (original == null) {
             return original;

@@ -1,7 +1,7 @@
 package livehider.client;
 
 import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 
@@ -12,7 +12,7 @@ import java.util.Optional;
  * A Cloth Config list entry that renders a vanilla {@link Button}; clicking it invokes
  * {@code onClick}. Used for the scoreboard "add rule" and per-rule "delete" actions. The button is
  * returned from {@link #children()} so the container forwards mouse/keyboard to it, and it is drawn in
- * {@link #render(GuiGraphics, int, int, int, int, int, int, int, boolean, float)}.
+ * {@link #extractRenderState(GuiGraphicsExtractor, int, int, int, int, int, int, int, boolean, float)}.
  */
 public class ActionButtonEntry extends AbstractConfigListEntry<Void> {
     private final Component buttonText;
@@ -77,7 +77,7 @@ public class ActionButtonEntry extends AbstractConfigListEntry<Void> {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int index, int top, int left, int width, int itemHeight, int mouseX, int mouseY, boolean hovered, float partialTicks) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int index, int top, int left, int width, int itemHeight, int mouseX, int mouseY, boolean hovered, float partialTicks) {
         lastLeft = left;
         lastTop = top;
         lastWidth = width;
@@ -92,7 +92,7 @@ public class ActionButtonEntry extends AbstractConfigListEntry<Void> {
             button.setY(y);
             button.setWidth(w);
         }
-        button.render(graphics, mouseX, mouseY, partialTicks);
+        button.extractRenderState(graphics, mouseX, mouseY, partialTicks);
     }
 
     @Override

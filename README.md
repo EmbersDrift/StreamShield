@@ -2,7 +2,7 @@
 
 # StreamShield
 
-A **Minecraft (Fabric, 1.21.11) client mod** that keeps your stream safe. It anonymizes player names, normalizes item names, rewrites scoreboard/keyword content, obfuscates skins, and provides an OBS overlay layer so sensitive HUD info never leaks to your stream.
+A **Minecraft (Fabric, 26.1.2) client mod** that keeps your stream safe. It anonymizes player names, normalizes item names, rewrites scoreboard/keyword content, obfuscates skins, and provides an OBS overlay layer so sensitive HUD info never leaks to your stream.
 
 ## Features
 
@@ -29,18 +29,18 @@ A **Minecraft (Fabric, 1.21.11) client mod** that keeps your stream safe. It ano
 
 ## Requirements
 
-- Minecraft **1.21.11** (Fabric loader) + Java **21**
+- Minecraft **26.1.2** (Fabric loader) + Java **25**
 - Fabric API, Architectury, Cloth Config (see [`fabric.mod.json`](src/main/resources/fabric.mod.json))
 
 ## Build
 
-Requires JDK 21.
+Requires JDK 25+ (Java 26 works).
 
 ```powershell
 gradlew.bat build
 ```
 
-The jar is output to `build/libs/StreamShield-1.0.1.jar`.
+The jar is output to `build/libs/StreamShield-1.1.0.jar`.
 
 ## CI / Releases
 

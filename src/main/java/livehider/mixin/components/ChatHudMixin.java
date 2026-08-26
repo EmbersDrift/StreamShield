@@ -2,7 +2,7 @@ package livehider.mixin.components;
 
 import livehider.LiveHider;
 import livehider.component.AllDefaultOverlayComponents;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ChatComponent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -14,12 +14,12 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 @Mixin(ChatComponent.class)
 public class ChatHudMixin {
     @ModifyVariable(
-        method = "render(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/gui/Font;IIIZZ)V",
+        method = "extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/gui/Font;IIILnet/minecraft/client/gui/components/ChatComponent$DisplayMode;Z)V",
         at = @At("HEAD"),
         argsOnly = true,
         index = 1
     )
-    private GuiGraphics drawStart(GuiGraphics value) {
+    private GuiGraphicsExtractor drawStart(GuiGraphicsExtractor value) {
         return LiveHider.getAPI().getGuiGraphics(AllDefaultOverlayComponents.chat, value);
     }
 }

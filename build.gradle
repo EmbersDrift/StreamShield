@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version '1.17.19'
+    id 'net.fabricmc.fabric-loom' version '1.17.20'
 }
 
 version = project.mod_version
@@ -13,20 +13,20 @@ repositories {
 }
 
 dependencies {
-    minecraft "net.minecraft:minecraft:${project.minecraft_version}"
-    mappings loom.officialMojangMappings()
+    // 26.1+ is unobfuscated: the game ships official names, so no remapping is needed.
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
 
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-    modImplementation "dev.architectury:architectury-fabric:${project.architectury_version}"
-    modImplementation("me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}") {
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    implementation "dev.architectury:architectury-fabric:${project.architectury_version}"
+    implementation("me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}") {
         exclude(group: "net.fabricmc.fabric-api")
     }
-    modImplementation "io.github.llamalad7:mixinextras-fabric:0.5.4"
+    implementation "io.github.llamalad7:mixinextras-fabric:0.5.4"
     include "io.github.llamalad7:mixinextras-fabric:0.5.4"
 
     // Optional integration: Mod Menu config entrypoint (compile-time only; runtime optional).
-    modImplementation "com.terraformersmc:modmenu:17.0.0"
+    implementation "com.terraformersmc:modmenu:18.0.0"
 
     // Overlay hook layer: JNA (native hook) + commons-io.
     implementation "net.java.dev.jna:jna:5.19.1"
@@ -36,15 +36,13 @@ dependencies {
 }
 
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    // 26.1 requires Java 25+; we compile with --release 25 on whatever JDK runs Gradle (25+).
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
 }
 
 tasks.withType(JavaCompile).configureEach {
-    it.options.release = 21
+    it.options.release = 25
 }
 
 processResources {
