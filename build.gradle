@@ -51,3 +51,9 @@ processResources {
         expand version: project.version
     }
 }
+
+// Version-prefixed jar names, e.g. [26.1.2]StreamShield-1.1.0.jar, so builds for different
+// Minecraft versions can be told apart when uploading (Modrinth / GitHub releases).
+jar {
+    archiveFileName = "[${project.minecraft_version}]${project.archives_name}-${project.version}.jar"
+}
