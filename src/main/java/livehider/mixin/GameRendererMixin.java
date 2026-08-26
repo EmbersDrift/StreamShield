@@ -63,10 +63,10 @@ public abstract class GameRendererMixin {
     public abstract Minecraft getMinecraft();
 
     @Inject(
-        method = "render(Lnet/minecraft/client/DeltaTracker;Z)V",
+        method = "extractGui(Lnet/minecraft/client/DeltaTracker;ZZ)V",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;applyCursor(Lcom/mojang/blaze3d/platform/Window;)V", shift = Shift.AFTER)
     )
-    private void fixCursor(DeltaTracker deltaTracker, boolean renderLevel, CallbackInfo ci) {
+    private void fixCursor(DeltaTracker deltaTracker, boolean renderLevel, boolean extractGuiArg, CallbackInfo ci) {
         if (LiveHider.getIsInitialized()) {
             GuiGraphicsExtractor guiGraphics = LiveHider.getAPI().getOverlayGuiGraphics();
             if (((GuiGraphicsAccessor) guiGraphics).getPendingCursor() != CursorType.DEFAULT) {
