@@ -51,6 +51,16 @@ public final class NameAnonymizer {
         if (clean.isEmpty()) {
             return;
         }
+        // OWN self-name mode: the local player's own name must never be anonymized. Every
+        // anonymization surface (TAB list, chat, scoreboard rows, chat input display) goes
+        // through this map, so excluding the own name here covers them all. Register() runs on
+        // every tick and on player-list changes, so toggling the mode also self-heals the map.
+        if ("OWN".equalsIgnoreCase(config.selfNameMode) && isOwnRealName(clean)) {
+            if (map.remove(clean) != null || patternCache.remove(clean) != null) {
+                rebuildSortedNames();
+            }
+            return;
+        }
         if (map.containsKey(clean)) {
             return;
         }
@@ -62,6 +72,20 @@ public final class NameAnonymizer {
         map.put(clean, config.nameTemplate + num);
         patternCache.remove(clean);
         // Re-sort the cached name list (build after current size, amortised — cheap relative to old per-call sort).
+        rebuildSortedNames();
+    }
+
+    /** True when {@code name} is the local player's own real (profile) name. */
+    private static boolean isOwnRealName(String name) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.player == null || mc.player.getGameProfile() == null) {
+            return false;
+        }
+        String own = mc.player.getGameProfile().name();
+        return own != null && own.equalsIgnoreCase(name);
+    }
+
+    private static void rebuildSortedNames() {
         sortedNames = new ArrayList<>(map.keySet());
         sortedNames.sort((a, b) -> b.length() - a.length());
     }
