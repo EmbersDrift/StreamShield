@@ -3,6 +3,9 @@
 build/
 out/
 
+# --- Git worktrees (parallel MC-version checkouts live under .worktrees/) ---
+.worktrees/
+
 # --- IDE ---
 .idea/
 *.iml
