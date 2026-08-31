@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -21,8 +22,13 @@ public abstract class NameTagMixin {
         if (name == null) {
             return;
         }
+        // Only player nametags can match the player-name map. Skipping mobs avoids running the
+        // anonymizer for every custom-named entity in dense farms/lobbies.
+        if (!(entity instanceof Player player)) {
+            return;
+        }
         boolean isSelf = entity == Minecraft.getInstance().player;
-        Component rewritten = NameAnonymizer.applySelfMode(name, isSelf);
+        Component rewritten = NameAnonymizer.applyPlayerDisplayName(name, player.getUUID(), isSelf);
         if (rewritten != name) {
             cir.setReturnValue(rewritten);
         }

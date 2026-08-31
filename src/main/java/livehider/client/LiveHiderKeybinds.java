@@ -26,7 +26,6 @@ public final class LiveHiderKeybinds {
         ));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             NameAnonymizer.setRevealInput(revealKey.isDown());
-            NameAnonymizer.refreshFromConnection();
         });
     }
 }

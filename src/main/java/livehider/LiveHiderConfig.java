@@ -151,6 +151,8 @@ public final class LiveHiderConfig {
         INSTANCE = fresh;
         INSTANCE.updateCache();
         Redactor.setup();
+        livehider.text.NameAnonymizer.invalidateDisplayNameCache();
+        livehider.text.NameAnonymizer.refreshFromConnection();
         return true;
     }
 
@@ -169,6 +171,9 @@ public final class LiveHiderConfig {
             try (BufferedWriter writer = Files.newBufferedWriter(configPath)) {
                 new GsonBuilder().setPrettyPrinting().create().toJson(get(), writer);
             }
+            Redactor.setup();
+            livehider.text.NameAnonymizer.invalidateDisplayNameCache();
+            livehider.text.NameAnonymizer.refreshFromConnection();
         } catch (IOException e) {
             LiveHider.LOGGER.error("Failed to save config", e);
         }
