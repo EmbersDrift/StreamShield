@@ -14,6 +14,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -28,6 +30,7 @@ public final class Redactor {
     private static final Set<String> staticWords = new HashSet<>();
     private static final Set<String> runtimeWords = new HashSet<>();
     private static Pattern combinedPattern;
+    private static List<CompiledScoreboardRule> compiledScoreboardRules = List.of();
     private static String replacement = "***";
     private static boolean patternDirty = true;
 
@@ -76,7 +79,25 @@ public final class Redactor {
                 LiveHider.LOGGER.error("Failed to load word list", e);
             }
         }
+        compileScoreboardRules(config);
         patternDirty = true;
+    }
+
+    /** Compile literal scoreboard rules when configuration changes, never while rendering HUD text. */
+    private static void compileScoreboardRules(LiveHiderConfig config) {
+        if (config == null || config.scoreboardRules == null) {
+            compiledScoreboardRules = List.of();
+            return;
+        }
+        List<CompiledScoreboardRule> rules = new ArrayList<>();
+        for (livehider.ScoreboardRule rule : config.scoreboardRules) {
+            if (rule == null || !rule.enabled || rule.key == null || rule.key.isEmpty()) {
+                continue;
+            }
+            Pattern pattern = Pattern.compile("(?i)(?<!\\w)" + Pattern.quote(rule.key) + "(?!\\w)");
+            rules.add(new CompiledScoreboardRule(pattern, rule.replacement != null ? rule.replacement : ""));
+        }
+        compiledScoreboardRules = List.copyOf(rules);
     }
 
     public static void addRuntimeWord(String word) {
@@ -162,41 +183,13 @@ public final class Redactor {
             return text;
         }
         String result = text;
-        for (livehider.ScoreboardRule rule : config.scoreboardRules) {
-            if (rule == null || !rule.enabled) {
-                continue;
-            }
-            String key = rule.key;
-            if (key == null || key.isEmpty()) {
-                continue;
-            }
-            java.util.Set<String> single = new java.util.HashSet<>();
-            single.add(key);
-            result = replaceWords(result, single, rule.replacement != null ? rule.replacement : "");
+        for (CompiledScoreboardRule rule : compiledScoreboardRules) {
+            result = rule.pattern.matcher(result).replaceAll(Matcher.quoteReplacement(rule.replacement));
         }
         return result;
     }
-    private static String replaceWords(String text, Iterable<String> words, String replacement) {
-        StringBuilder sb = new StringBuilder();
-        boolean first = true;
-        for (String word : words) {
-            if (word == null || word.isEmpty()) {
-                continue;
-            }
-            if (!first) {
-                sb.append('|');
-            }
-            sb.append("(?<!\\w)").append(Pattern.quote(word)).append("(?!\\w)");
-            first = false;
-        }
-        if (first) {
-            return text;
-        }
-        try {
-            return Pattern.compile("(?i)(?:" + sb + ")").matcher(text).replaceAll(Matcher.quoteReplacement(replacement));
-        } catch (Exception e) {
-            return text;
-        }
+
+    private record CompiledScoreboardRule(Pattern pattern, String replacement) {
     }
 
     private static String stripFormatCodes(String s) {

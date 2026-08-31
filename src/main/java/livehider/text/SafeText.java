@@ -150,7 +150,6 @@ public final class SafeText {
             String text = ptc.text();
             String replaced = transform.apply(text);
             if (!replaced.equals(text)) {
-                livehider.LiveHider.LOGGER.info("[LiveHider][fmt] leaf replaced: \"{}\" -> \"{}\"", text, replaced);
                 // Preserve legacy § formatting codes in the replacement (so §X renders as colour/format),
                 // and re-append the original siblings so value/number parts are not dropped.
                 if (replaced.indexOf('\u00A7') >= 0) {

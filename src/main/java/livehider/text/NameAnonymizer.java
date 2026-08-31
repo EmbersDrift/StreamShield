@@ -24,6 +24,9 @@ import java.util.regex.Pattern;
 public final class NameAnonymizer {
     private static final Map<String, String> map = new HashMap<>();
     private static final Map<String, Pattern> patternCache = new HashMap<>();
+    // Name tags and the TAB overlay request the same display component every render frame. Keep
+    // their rewritten form per player instead of running the full text/regex pipeline every time.
+    private static final Map<UUID, DisplayNameCacheEntry> displayNameCache = new HashMap<>();
     private static List<String> sortedNames = new ArrayList<>();
     private static long salt;
     private static boolean active;
@@ -36,8 +39,14 @@ public final class NameAnonymizer {
         salt = new Random().nextLong();
         map.clear();
         patternCache.clear();
+        displayNameCache.clear();
         sortedNames = new ArrayList<>();
         active = true;
+    }
+
+    /** Drop render-path display-name results after a configuration reload/save. */
+    public static void invalidateDisplayNameCache() {
+        displayNameCache.clear();
     }
 
     /** Register a player's real name so it can be anonymized everywhere it is rendered. */
@@ -71,6 +80,8 @@ public final class NameAnonymizer {
         String num = String.format("%0" + digits + "d", n % modulo);
         map.put(clean, config.nameTemplate + num);
         patternCache.remove(clean);
+        // A newly known player can appear inside another player's decorated nickname.
+        displayNameCache.clear();
         // Re-sort the cached name list (build after current size, amortised — cheap relative to old per-call sort).
         rebuildSortedNames();
     }
@@ -153,7 +164,7 @@ public final class NameAnonymizer {
     /** (Re)populate the name map from the connection's online players and the world's player entities. */
     public static void refreshFromConnection() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) {
+        if (mc == null || mc.player == null) {
             return;
         }
         if (mc.player.connection != null) {
@@ -192,5 +203,26 @@ public final class NameAnonymizer {
             return name;
         }
         return SafeText.rewrite(name);
+    }
+
+    /**
+     * Render-path variant for player name tags and TAB entries. The source display component is
+     * normally stable between network updates, so caching here prevents a per-frame scan of every
+     * known player name and the associated regex/string allocations.
+     */
+    public static Component applyPlayerDisplayName(Component name, UUID playerId, boolean isSelf) {
+        if (name == null || playerId == null) {
+            return name;
+        }
+        DisplayNameCacheEntry cached = displayNameCache.get(playerId);
+        if (cached != null && cached.source.equals(name) && cached.isSelf == isSelf) {
+            return cached.result;
+        }
+        Component result = applySelfMode(name, isSelf);
+        displayNameCache.put(playerId, new DisplayNameCacheEntry(name, isSelf, result));
+        return result;
+    }
+
+    private record DisplayNameCacheEntry(Component source, boolean isSelf, Component result) {
     }
 }

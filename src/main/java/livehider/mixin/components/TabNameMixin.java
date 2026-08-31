@@ -24,7 +24,7 @@ public class TabNameMixin {
         }
         Minecraft mc = Minecraft.getInstance();
         boolean isSelf = mc.player != null && playerInfo.getProfile().id().equals(mc.player.getUUID());
-        Component rewritten = NameAnonymizer.applySelfMode(name, isSelf);
+        Component rewritten = NameAnonymizer.applyPlayerDisplayName(name, playerInfo.getProfile().id(), isSelf);
         if (rewritten != name) {
             cir.setReturnValue(rewritten == null ? Component.empty() : rewritten);
         }
