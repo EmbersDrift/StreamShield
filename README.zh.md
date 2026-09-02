@@ -40,7 +40,7 @@
 gradlew.bat build
 ```
 
-产物在 `build/libs/[26.1.2]StreamShield-1.1.0.jar`。
+产物在 `build/libs/[26.1.2]StreamShield-1.1.1.jar`。
 
 ## CI / 发布
 
