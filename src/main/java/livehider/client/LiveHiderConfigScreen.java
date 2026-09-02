@@ -5,6 +5,7 @@ import livehider.ScoreboardRule;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
+import me.shedaniel.clothconfig2.api.ConfigScreen;
 import me.shedaniel.clothconfig2.impl.builders.SubCategoryBuilder;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -16,6 +17,7 @@ import net.minecraft.network.chat.Component;
  */
 public final class LiveHiderConfigScreen {
     private static Screen parentScreen;
+    private static ConfigScreen activeConfigScreen;
 
     private LiveHiderConfigScreen() {
     }
@@ -36,6 +38,31 @@ public final class LiveHiderConfigScreen {
         }
     }
 
+    /**
+     * Rule structure changes require recreating the Cloth Config page. Flush every visible entry
+     * first so edits in other categories are preserved rather than silently discarded.
+     */
+    private static void applyRuleAction(Runnable action) {
+        if (activeConfigScreen != null) {
+            // saveAll also invokes the saving runnable. Temporarily suppress that disk write; the
+            // structural action below is followed by one complete save of the resulting config.
+            activeConfigScreen.setSavingRunnable(() -> {});
+            try {
+                activeConfigScreen.saveAll(false);
+            } finally {
+                activeConfigScreen.setSavingRunnable(LiveHiderConfig::save);
+            }
+        }
+        action.run();
+        LiveHiderConfig.save();
+        reopen();
+    }
+
+    /** True only for the live StreamShield Cloth Config page, not another mod's text field. */
+    public static boolean isActiveConfigScreen(Screen screen) {
+        return activeConfigScreen == screen;
+    }
+
     /** Extract the last path segment (after the final '.') from a component id, e.g. "live_hider.live_hider.debug_menu" -> "debug_menu". */
     private static String lastSegment(String id) {
         int dot = id.lastIndexOf('.');
@@ -49,6 +76,11 @@ public final class LiveHiderConfigScreen {
             .setParentScreen(parent)
             .setTitle(t("live_hider.title"));
         builder.setSavingRunnable(LiveHiderConfig::save);
+        builder.setAfterInitConsumer(screen -> {
+            if (screen instanceof ConfigScreen configScreen) {
+                activeConfigScreen = configScreen;
+            }
+        });
 
         ConfigEntryBuilder e = builder.entryBuilder();
 
@@ -146,6 +178,7 @@ public final class LiveHiderConfigScreen {
             .setTooltip(t("live_hider.scoreboard.enabled_group.tooltip"))
             .build());
         scoreboard.addEntry(e.startTextDescription(t("live_hider.scoreboard.desc")).build());
+        scoreboard.addEntry(e.startTextDescription(t("live_hider.scoreboard.actions_hint")).build());
         scoreboard.addEntry(e.startTextDescription(t("live_hider.scoreboard.disclaimer")).build());
         for (int i = 0; i < config.scoreboardRules.size(); i++) {
             ScoreboardRule rule = config.scoreboardRules.get(i);
@@ -167,32 +200,47 @@ public final class LiveHiderConfigScreen {
                 .setTooltip(t("live_hider.scoreboard.replacement.tooltip"))
                 .setSaveConsumer(v -> config.scoreboardRules.get(idx).replacement = v)
                 .build());
+            sub.add(new ActionButtonEntry(
+                t("live_hider.scoreboard.move_up"),
+                t("live_hider.scoreboard.move_up"),
+                () -> applyRuleAction(() -> {
+                    if (idx > 0 && idx < config.scoreboardRules.size()) {
+                        java.util.Collections.swap(config.scoreboardRules, idx, idx - 1);
+                    }
+                })));
+            sub.add(new ActionButtonEntry(
+                t("live_hider.scoreboard.move_down"),
+                t("live_hider.scoreboard.move_down"),
+                () -> applyRuleAction(() -> {
+                    if (idx >= 0 && idx < config.scoreboardRules.size() - 1) {
+                        java.util.Collections.swap(config.scoreboardRules, idx, idx + 1);
+                    }
+                })));
             // Delete button for this rule.
             sub.add(new ActionButtonEntry(
                 t("live_hider.scoreboard.delete_rule"),
                 t("live_hider.scoreboard.delete_rule"),
-                () -> {
+                () -> applyRuleAction(() -> {
                     if (idx < config.scoreboardRules.size()) {
                         config.scoreboardRules.remove(idx);
-                        reopen();
                     }
-                }));
+                })));
             scoreboard.addEntry(sub.build());
         }
         // Add rule button (as an entry row, not a sub-category).
         scoreboard.addEntry(new ActionButtonEntry(
             t("live_hider.scoreboard.add_rule"),
             t("live_hider.scoreboard.add_rule"),
-            () -> {
+            () -> applyRuleAction(() -> {
                 config.scoreboardRules.add(new ScoreboardRule(true, "", ""));
-                livehider.LiveHider.LOGGER.info("[LiveHider] Add rule clicked, size now {}", config.scoreboardRules.size());
-                reopen();
-            }));
+            })));
 
         // ---- Overlay (obs-overlay HUD concealer) ----
         ConfigCategory overlayCat = builder.getOrCreateCategory(t("live_hider.category.overlay"));
+        overlayCat.addEntry(e.startTextDescription(t("live_hider.overlay.desc")).build());
         overlayCat.addEntry(e.startBooleanToggle(t("live_hider.overlay.hide_all_screens"), config.hideAllScreens)
             .setDefaultValue(false)
+            .setTooltip(t("live_hider.overlay.hide_all_screens.tooltip"))
             .setSaveConsumer(v -> config.hideAllScreens = v)
             .build());
         for (livehider.component.IOverlayComponent comp : livehider.component.OverlayComponentRegistry.components) {
@@ -213,6 +261,7 @@ public final class LiveHiderConfigScreen {
         }
         overlayCat.addEntry(e.startBooleanToggle(t("live_hider.overlay.show_test_icon"), config.showTestIcon)
             .setDefaultValue(false)
+            .setTooltip(t("live_hider.overlay.show_test_icon.tooltip"))
             .setSaveConsumer(v -> config.showTestIcon = v)
             .build());
 

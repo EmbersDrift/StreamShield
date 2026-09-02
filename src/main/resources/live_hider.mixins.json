@@ -18,7 +18,6 @@
     "components.PlayerListHudMixin",
     "components.SubtitlesHudMixin",
     "components.ChatScreenMixin",
-    "components.ItemStackMixin",
     "components.ChatNameMixin",
     "components.NameTagMixin",
     "components.TabNameMixin",

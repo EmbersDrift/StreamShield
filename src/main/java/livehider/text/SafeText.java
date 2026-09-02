@@ -152,7 +152,7 @@ public final class SafeText {
             if (!replaced.equals(text)) {
                 // Preserve legacy § formatting codes in the replacement (so §X renders as colour/format),
                 // and re-append the original siblings so value/number parts are not dropped.
-                if (replaced.indexOf('\u00A7') >= 0) {
+                if (containsLegacyFormatting(replaced)) {
                     MutableComponent nodeRoot = parseLegacyFormatting(replaced);
                     for (Component sibling : node.getSiblings()) {
                         nodeRoot.append(rewriteNode(sibling, transform));
@@ -207,5 +207,21 @@ public final class SafeText {
             result.append(rewriteNode(sibling, transform));
         }
         return result;
+    }
+
+    private static boolean containsLegacyFormatting(String text) {
+        for (int i = 0; i + 1 < text.length(); i++) {
+            char marker = text.charAt(i);
+            if (marker == '\u00A7' || marker == '&') {
+                if (marker == '&' && text.charAt(i + 1) == '&') {
+                    i++;
+                    continue;
+                }
+                if (ChatFormatting.getByCode(text.charAt(i + 1)) != null) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }
