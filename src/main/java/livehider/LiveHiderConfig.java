@@ -37,7 +37,7 @@ public final class LiveHiderConfig {
     public transient HashSet<Class<?>> overlayScreensClasses = new HashSet<>();
     public boolean showTestIcon;
 
-    // Stream-safe item name normalization: renamed items show their bound registry name instead of the custom NBT name.
+    // Stream-safe client display: renamed items show their localized vanilla name instead of the custom name.
     public boolean normalizeItemNames = true;
 
     // ---- M2b-1: name anonymization ----

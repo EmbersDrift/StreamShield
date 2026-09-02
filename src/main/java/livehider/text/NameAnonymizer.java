@@ -11,6 +11,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -28,6 +29,7 @@ public final class NameAnonymizer {
     // their rewritten form per player instead of running the full text/regex pipeline every time.
     private static final Map<UUID, DisplayNameCacheEntry> displayNameCache = new HashMap<>();
     private static List<String> sortedNames = new ArrayList<>();
+    private static String ownName;
     private static long salt;
     private static boolean active;
     private static boolean revealInput;
@@ -41,6 +43,7 @@ public final class NameAnonymizer {
         patternCache.clear();
         displayNameCache.clear();
         sortedNames = new ArrayList<>();
+        ownName = null;
         active = true;
     }
 
@@ -60,12 +63,16 @@ public final class NameAnonymizer {
         if (clean.isEmpty()) {
             return;
         }
-        // OWN self-name mode: the local player's own name must never be anonymized. Every
-        // anonymization surface (TAB list, chat, scoreboard rows, chat input display) goes
-        // through this map, so excluding the own name here covers them all. Register() runs on
-        // every tick and on player-list changes, so toggling the mode also self-heals the map.
-        if ("OWN".equalsIgnoreCase(config.selfNameMode) && isOwnRealName(clean)) {
-            if (map.remove(clean) != null || patternCache.remove(clean) != null) {
+        // Self-name mode has priority over global player anonymization on every text surface.
+        // Keep its replacement in the same map used by chat, scoreboards and input fields, while
+        // name tags/TAB additionally use applySelfMode for their null/display-component behavior.
+        if (isOwnRealName(clean)) {
+            ownName = clean;
+            String replacement = selfNameReplacement(config, clean, id);
+            String previous = replacement == null ? map.remove(clean) : map.put(clean, replacement);
+            patternCache.remove(clean);
+            if (!Objects.equals(previous, replacement)) {
+                displayNameCache.clear();
                 rebuildSortedNames();
             }
             return;
@@ -73,12 +80,7 @@ public final class NameAnonymizer {
         if (map.containsKey(clean)) {
             return;
         }
-        int digits = Math.min(9, Math.max(1, config.nameDigits));
-        long h = (id != null ? id.getLeastSignificantBits() : clean.hashCode()) ^ salt;
-        int n = Math.abs((int) h);
-        int modulo = (int) Math.pow(10, digits);
-        String num = String.format("%0" + digits + "d", n % modulo);
-        map.put(clean, config.nameTemplate + num);
+        map.put(clean, anonymousReplacement(config, clean, id));
         patternCache.remove(clean);
         // A newly known player can appear inside another player's decorated nickname.
         displayNameCache.clear();
@@ -96,6 +98,29 @@ public final class NameAnonymizer {
         return own != null && own.equalsIgnoreCase(name);
     }
 
+    /** Null means keep the real name; an empty string means hide it in text-only surfaces. */
+    private static String selfNameReplacement(LiveHiderConfig config, String realName, UUID id) {
+        if ("OWN".equalsIgnoreCase(config.selfNameMode)) {
+            return null;
+        }
+        if ("HIDE".equalsIgnoreCase(config.selfNameMode)) {
+            return "";
+        }
+        if ("CUSTOM".equalsIgnoreCase(config.selfNameMode)) {
+            return config.selfCustomName != null ? config.selfCustomName : "";
+        }
+        return anonymousReplacement(config, realName, id);
+    }
+
+    private static String anonymousReplacement(LiveHiderConfig config, String name, UUID id) {
+        int digits = Math.min(9, Math.max(1, config.nameDigits));
+        long h = (id != null ? id.getLeastSignificantBits() : name.hashCode()) ^ salt;
+        int n = Math.abs((int) h);
+        int modulo = (int) Math.pow(10, digits);
+        String num = String.format("%0" + digits + "d", n % modulo);
+        return config.nameTemplate + num;
+    }
+
     private static void rebuildSortedNames() {
         sortedNames = new ArrayList<>(map.keySet());
         sortedNames.sort((a, b) -> b.length() - a.length());
@@ -103,7 +128,10 @@ public final class NameAnonymizer {
 
     public static boolean isActive() {
         LiveHiderConfig config = LiveHiderConfig.get();
-        return active && config != null && config.anonymizeNames && !map.isEmpty();
+        return active
+            && config != null
+            && !map.isEmpty()
+            && (config.anonymizeNames || hasSelfReplacement());
     }
 
     public static void setRevealInput(boolean value) {
@@ -116,12 +144,34 @@ public final class NameAnonymizer {
 
     /** Replace every known player name in a plain string (longest names first, word boundaries). */
     public static String applyToText(String text) {
-        if (text == null || !isActive()) {
+        LiveHiderConfig config = LiveHiderConfig.get();
+        return applyNames(text, config != null && config.anonymizeNames);
+    }
+
+    /**
+     * Sanitizes a chat input field independently of the global name-anonymization display mode.
+     * This deliberately affects known player names only; generic redaction is not applied to text
+     * that the player is about to send.
+     */
+    public static String applyToChatInput(String text) {
+        return applyNames(text, true);
+    }
+
+    private static boolean hasSelfReplacement() {
+        return ownName != null && map.containsKey(ownName);
+    }
+
+    /** @param includeAllNames false restricts rewriting to the local player's configured replacement. */
+    private static String applyNames(String text, boolean includeAllNames) {
+        if (text == null || !active || map.isEmpty() || (!includeAllNames && !hasSelfReplacement())) {
             return text;
         }
         List<String> names = sortedNames;
         String result = text;
         for (String name : names) {
+            if (!includeAllNames && !name.equals(ownName)) {
+                continue;
+            }
             String anon = map.get(name);
             Pattern p = patternCache.computeIfAbsent(name, n -> Pattern.compile("(?<!\\w)" + Pattern.quote(n) + "(?!\\w)"));
             result = p.matcher(result).replaceAll(Matcher.quoteReplacement(anon));
@@ -196,7 +246,9 @@ public final class NameAnonymizer {
             return null;
         }
         if ("CUSTOM".equalsIgnoreCase(config.selfNameMode)) {
-            return Component.literal(config.selfCustomName);
+            // Supports both § codes and & aliases while keeping ordinary Unicode/special
+            // characters literal. Parsing happens once per display-name cache entry.
+            return SafeText.parseLegacyFormatting(config.selfCustomName == null ? "" : config.selfCustomName);
         }
         if ("OWN".equalsIgnoreCase(config.selfNameMode)) {
             // Show the player's own real name unchanged (escape hatch to get back to normal).

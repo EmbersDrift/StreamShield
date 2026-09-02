@@ -1,5 +1,7 @@
 package livehider.mixin.components;
 
+import livehider.client.LiveHiderConfigScreen;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.util.StringUtil;
 import org.spongepowered.asm.mixin.Mixin;
@@ -24,7 +26,9 @@ public class EditBoxInputMixin {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/util/StringUtil;filterText(Ljava/lang/String;)Ljava/lang/String;")
     )
     private String preserveFormattingCodes(String filtered, String text) {
-        if (text != null && text.indexOf('\u00A7') >= 0) {
+        if (text != null
+            && text.indexOf('\u00A7') >= 0
+            && LiveHiderConfigScreen.isActiveConfigScreen(Minecraft.getInstance().screen)) {
             return text;
         }
         return filtered;
