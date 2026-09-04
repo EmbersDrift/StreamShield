@@ -6,6 +6,9 @@ out/
 # --- Git worktrees (parallel MC-version checkouts live under .worktrees/) ---
 .worktrees/
 
+# --- Personal local skin library (user's own LittleSkin downloads; not part of the build) ---
+local-skin-library/
+
 # --- IDE ---
 .idea/
 *.iml
