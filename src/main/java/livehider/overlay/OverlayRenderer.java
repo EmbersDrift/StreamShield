@@ -8,13 +8,17 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import java.io.Closeable;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.util.List;
+import java.util.Map;
 import java.util.OptionalInt;
 import livehider.component.IOverlayComponent;
-import livehider.mixin.accessor.GuiRendererAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.render.GuiRenderer;
 import net.minecraft.client.gui.render.state.GuiRenderState;
+import net.minecraft.client.renderer.RenderPipelines;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -70,15 +74,43 @@ public class OverlayRenderer implements Closeable {
         if (this.overlayGuiRenderer != null) {
             return this.overlayGuiRenderer;
         }
-        GuiRendererAccessor accessor = (GuiRendererAccessor) copyFrom;
-        this.overlayGuiRenderer = new GuiRenderer(
-            this.overlayGuiState,
-            accessor.getBufferSource(),
-            accessor.getSubmitNodeCollector(),
-            accessor.getFeatureRenderDispatcher(),
-            accessor.getPictureInPictureRenderers().values().stream().toList()
-        );
+        try {
+            List<?> pipRenderers = isNeoForgePresent()
+                ? List.of()
+                : ((Map<?, ?>) getField(copyFrom, "pictureInPictureRenderers")).values().stream().toList();
+            Constructor<GuiRenderer> constructor = GuiRenderer.class.getConstructor(
+                GuiRenderState.class,
+                net.minecraft.client.renderer.MultiBufferSource.BufferSource.class,
+                net.minecraft.client.renderer.SubmitNodeCollector.class,
+                net.minecraft.client.renderer.feature.FeatureRenderDispatcher.class,
+                List.class
+            );
+            this.overlayGuiRenderer = constructor.newInstance(
+                this.overlayGuiState,
+                getField(copyFrom, "bufferSource"),
+                getField(copyFrom, "submitNodeCollector"),
+                getField(copyFrom, "featureRenderDispatcher"),
+                pipRenderers
+            );
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Unable to create StreamShield overlay GUI renderer", e);
+        }
         return this.overlayGuiRenderer;
+    }
+
+    private static boolean isNeoForgePresent() {
+        try {
+            Class.forName("net.neoforged.neoforge.common.NeoForge");
+            return true;
+        } catch (ClassNotFoundException ignored) {
+            return false;
+        }
+    }
+
+    private static Object getField(GuiRenderer renderer, String name) throws ReflectiveOperationException {
+        Field field = GuiRenderer.class.getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(renderer);
     }
 
     public RenderTarget getGuiRenderTarget() {
@@ -131,7 +163,12 @@ public class OverlayRenderer implements Closeable {
                 .createCommandEncoder()
                 .createRenderPass(() -> "Overlay Screen", new OverlayScreenTextureView(width, height), OptionalInt.empty());
             try {
-                renderPass.setPipeline(OverlayPipelines.OVERLAY_COMPOSITE);
+                // NeoForge's resource reload can omit a mod-added full-screen shader from its
+                // initial compilation cache. Its built-in outline blit has the same screenquad /
+                // InSampler contract and alpha compositing semantics, so use that stable path.
+                renderPass.setPipeline(isNeoForgePresent()
+                    ? RenderPipelines.ENTITY_OUTLINE_BLIT
+                    : OverlayPipelines.OVERLAY_COMPOSITE);
                 RenderSystem.bindDefaultUniforms(renderPass);
                 renderPass.bindTexture("InSampler", framebuffer.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
                 renderPass.draw(0, 3);

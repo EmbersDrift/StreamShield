@@ -58,11 +58,11 @@ processResources {
 // Minecraft versions can be told apart when uploading (Modrinth / GitHub releases).
 // Loom overrides remapJar's file name after script evaluation, so force it in afterEvaluate.
 tasks.withType(Jar).configureEach {
-    archiveFileName = "[${project.minecraft_version}]${project.archives_name}-${project.version}.jar"
+    archiveFileName = "[${project.minecraft_version}]${project.archives_name}-${project.version}-fabric.jar"
 }
 afterEvaluate {
     def remap = tasks.findByName('remapJar')
     if (remap != null) {
-        remap.archiveFileName = "[${project.minecraft_version}]${project.archives_name}-${project.version}.jar"
+        remap.archiveFileName = "[${project.minecraft_version}]${project.archives_name}-${project.version}-fabric.jar"
     }
 }

@@ -2,7 +2,7 @@ package livehider.mixin.components;
 
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.mojang.authlib.GameProfile;
-import livehider.skin.SkinOverride;
+import livehider.skin.RandomSkinManager;
 import net.minecraft.client.resources.SkinManager;
 import net.minecraft.world.entity.player.PlayerSkin;
 import org.spongepowered.asm.mixin.Mixin;
@@ -19,10 +19,14 @@ import java.util.function.Supplier;
 public class PlayerSkinMixin {
     @ModifyReturnValue(method = "createLookup", at = @At("RETURN"))
     private Supplier<PlayerSkin> overrideSkinLookup(Supplier<PlayerSkin> original, GameProfile profile, boolean secure) {
-        if (SkinOverride.isSteveActive()) {
-            PlayerSkin steve = SkinOverride.getSteveSkin();
-            return () -> steve;
-        }
-        return original;
+        // Keep the wrapper even while OFF so switching modes affects existing cached lookups.
+        return () -> {
+            // Some servers/client-side model extensions attach state while resolving the original
+            // supplier. Always run it before substituting the final texture; skipping it made heads
+            // disappear on servers with such skin/model integrations.
+            PlayerSkin originalSkin = original.get();
+            PlayerSkin custom = RandomSkinManager.getSkin((SkinManager) (Object) this, profile);
+            return custom != null ? custom : originalSkin;
+        };
     }
 }

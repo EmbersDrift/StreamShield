@@ -54,6 +54,9 @@ public final class LiveHiderConfig {
     public String redactReplacement = "***";
     public boolean autoGrabServer = true;
     public boolean redactPresetEnabled = true;
+    // Broad profanity/sensitive-content list. Off by default because it intentionally trades
+    // normal chat readability for stricter filtering.
+    public boolean redactStrictPresetEnabled = false;
 
     // Scoreboard chain rules (ordered): replaced in list order, result feeds the next rule.
     public boolean scoreboardEnabled = true;
@@ -63,13 +66,23 @@ public final class LiveHiderConfig {
     public transient java.util.HashMap<String, String> scoreboardReplacements = new java.util.HashMap<>();
 
     // ---- M2c: skin obfuscation ----
-    // OFF: keep real skins. STEVE: everyone renders with the default Steve skin (kills anything hidden
-    // in a skin texture). RANDOM: each player gets one random skin from a skin-site API (cached per UUID),
-    // with an optional player-name pool as fallback source. API/pool configured in the GUI later.
-    public String skinMode = "OFF"; // OFF | STEVE | RANDOM
-    public String skinApiBase = "";      // e.g. https://littleskin.cn
-    public String skinApiToken = "";     // for authenticated texture retrieval if the API needs it
-    public java.util.ArrayList<String> skinRandomPool = new java.util.ArrayList<>(); // player names to draw random skins from
+    // Legacy global mode, retained to migrate existing config files.
+    public String skinMode = "OFF"; // OFF | STEVE | CUSTOM (RANDOM remains a legacy alias)
+    /** Per-target modes: ORIGINAL keeps the skin; STEVE, CUSTOM and RANDOM replace it. */
+    public String skinOtherMode = null;
+    public String skinSource = "MOJANG"; // MOJANG | LITTLESKIN | ELYBY | URL_TEMPLATE | LOCAL_FOLDER
+    public String skinSelfMode = "KEEP"; // ORIGINAL | STEVE | CUSTOM | RANDOM; KEEP is legacy
+    /** One fixed account ID (or a PNG filename for LOCAL_FOLDER) used by CUSTOM. */
+    public String skinCustomSkin = "";
+    /** HTTPS PNG endpoint for URL_TEMPLATE. {name} is replaced with a pool ID. */
+    public String skinUrlTemplate = "";
+    /** Folder containing 64x64 PNG skins for LOCAL_FOLDER. Only direct child PNG files are used. */
+    public String skinLocalFolder = "";
+    // Kept only so older manually edited configs remain readable. Tokens are intentionally unused:
+    // this client-side display feature must not persist account credentials in its JSON config.
+    @Deprecated public String skinApiBase = "";
+    @Deprecated public String skinApiToken = "";
+    public java.util.ArrayList<String> skinRandomPool = new java.util.ArrayList<>();
 
 
     // Debug logging for matching (see logs for raw/stripped scoreboard text and match result).
@@ -88,6 +101,11 @@ public final class LiveHiderConfig {
         } else {
             INSTANCE = new LiveHiderConfig();
         }
+        if (INSTANCE == null) {
+            LiveHider.LOGGER.warn("Config file contained null; using defaults");
+            INSTANCE = new LiveHiderConfig();
+        }
+        INSTANCE.normalize();
         migrateLegacyScoreboardMap(configPath, gson);
         INSTANCE.updateCache();
     }
@@ -148,8 +166,10 @@ public final class LiveHiderConfig {
             LiveHider.LOGGER.warn("Config reload produced null (keeping current)");
             return false;
         }
+        fresh.normalize();
         INSTANCE = fresh;
         INSTANCE.updateCache();
+        livehider.skin.RandomSkinManager.invalidateConfigCache();
         Redactor.setup();
         livehider.text.NameAnonymizer.invalidateDisplayNameCache();
         livehider.text.NameAnonymizer.refreshFromConnection();
@@ -171,11 +191,32 @@ public final class LiveHiderConfig {
             try (BufferedWriter writer = Files.newBufferedWriter(configPath)) {
                 new GsonBuilder().setPrettyPrinting().create().toJson(get(), writer);
             }
+            // Do not let the polling watcher replace the live config with an identical copy while
+            // a Cloth Config screen still holds this instance for follow-up rule actions.
+            markConfigWatcherCurrentFileState();
+            livehider.skin.RandomSkinManager.invalidateConfigCache();
             Redactor.setup();
             livehider.text.NameAnonymizer.invalidateDisplayNameCache();
             livehider.text.NameAnonymizer.refreshFromConnection();
         } catch (IOException e) {
             LiveHider.LOGGER.error("Failed to save config", e);
+        }
+    }
+
+    private static void markConfigWatcherCurrentFileState() {
+        for (String watcherName : new String[] {
+            "livehider.client.LiveHiderConfigWatcher",
+            "livehider.neoforge.NeoForgeConfigWatcher"
+        }) {
+            try {
+                Class<?> watcher = Class.forName(watcherName);
+                java.lang.reflect.Method method = watcher.getDeclaredMethod("markCurrentFileState");
+                method.setAccessible(true);
+                method.invoke(null);
+                return;
+            } catch (ReflectiveOperationException ignored) {
+                // Try the watcher supplied by the other loader, if present.
+            }
         }
     }
 
@@ -191,6 +232,47 @@ public final class LiveHiderConfig {
             }
         }
         save();
+    }
+
+    /** Keep manually edited or older JSON configurations safe to consume after loading. */
+    private void normalize() {
+        if (overlayComponents == null) overlayComponents = new HashMap<>();
+        if (autoHideComponents == null) autoHideComponents = new HashMap<>();
+        if (overlayScreensList == null) overlayScreensList = new HashMap<>();
+        if (overlayHandledScreensList == null) overlayHandledScreensList = new HashSet<>();
+        if (overlayScreensClasses == null) overlayScreensClasses = new HashSet<>();
+        if (nameTemplate == null) nameTemplate = "[Player]#";
+        if (selfNameMode == null) selfNameMode = "HIDE";
+        if (selfCustomName == null) selfCustomName = "";
+        if (redactPatterns == null) redactPatterns = new java.util.ArrayList<>();
+        if (redactReplacement == null) redactReplacement = "***";
+        if (scoreboardRules == null) scoreboardRules = new java.util.ArrayList<>();
+        if (scoreboardReplacements == null) scoreboardReplacements = new java.util.HashMap<>();
+        if (skinMode == null) skinMode = "OFF";
+        String migratedLegacySkinMode = "STEVE".equalsIgnoreCase(skinMode) ? "STEVE"
+            : ("CUSTOM".equalsIgnoreCase(skinMode) || "RANDOM".equalsIgnoreCase(skinMode)) ? "RANDOM" : "ORIGINAL";
+        if (skinOtherMode == null) skinOtherMode = migratedLegacySkinMode;
+        if (skinSource == null) skinSource = "MOJANG";
+        if (skinSelfMode == null) skinSelfMode = "KEEP";
+        if ("KEEP".equalsIgnoreCase(skinSelfMode)) {
+            skinSelfMode = "STEVE".equalsIgnoreCase(migratedLegacySkinMode) ? "STEVE" : "ORIGINAL";
+        }
+        if ("OFF".equalsIgnoreCase(skinOtherMode)) skinOtherMode = "ORIGINAL";
+        if ("OFF".equalsIgnoreCase(skinSelfMode)) skinSelfMode = "ORIGINAL";
+        if (skinCustomSkin == null) skinCustomSkin = "";
+        if (skinApiBase == null) skinApiBase = "";
+        if (skinApiToken == null) skinApiToken = "";
+        if (skinUrlTemplate == null) skinUrlTemplate = "";
+        if (skinLocalFolder == null) skinLocalFolder = "";
+        if (skinRandomPool == null) skinRandomPool = new java.util.ArrayList<>();
+        overlayComponents.entrySet().removeIf(entry -> entry.getValue() == null);
+        autoHideComponents.entrySet().removeIf(entry -> entry.getValue() == null);
+        overlayScreensList.entrySet().removeIf(entry -> entry.getValue() == null);
+        scoreboardRules.removeIf(rule -> rule == null);
+        for (ScoreboardRule rule : scoreboardRules) {
+            if (rule.key == null) rule.key = "";
+            if (rule.replacement == null) rule.replacement = "";
+        }
     }
 
     public static boolean isScreenOverlayed(Screen screen) {

@@ -39,15 +39,24 @@ public final class MojangSkinLookup {
     private MojangSkinLookup() {
     }
 
+    /** Mojang account names are ASCII letters, digits, and underscores, 3–16 characters long. */
+    public static boolean isValidPlayerName(String name) {
+        return name != null && name.trim().matches("[A-Za-z0-9_]{3,16}");
+    }
+
     /** Resolve a (dashed or undashed) UUID string to canonical dashed form. */
     private static String dashed(UUID id) {
         return id.toString();
     }
 
     public static CompletableFuture<UUID> lookupId(String name) {
+        if (!isValidPlayerName(name)) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Invalid Minecraft account name"));
+        }
+        String cleanName = name.trim();
         return Util.make(() -> CompletableFuture.supplyAsync(() -> {
             try {
-                HttpRequest req = HttpRequest.newBuilder(URI.create(USERS_URL + name))
+                HttpRequest req = HttpRequest.newBuilder(URI.create(USERS_URL + cleanName))
                     .timeout(Duration.ofSeconds(10))
                     .GET().build();
                 HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());

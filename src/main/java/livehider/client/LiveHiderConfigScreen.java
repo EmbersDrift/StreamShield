@@ -106,6 +106,11 @@ public final class LiveHiderConfigScreen {
             .setTooltip(t("live_hider.redact_preset.tooltip"))
             .setSaveConsumer(v -> config.redactPresetEnabled = v)
             .build());
+        general.addEntry(e.startBooleanToggle(t("live_hider.redact_strict_preset"), config.redactStrictPresetEnabled)
+            .setDefaultValue(false)
+            .setTooltip(t("live_hider.redact_strict_preset.tooltip"))
+            .setSaveConsumer(v -> config.redactStrictPresetEnabled = v)
+            .build());
         // The string-list works by clicking "Add" then typing into the box below; make that explicit.
         general.addEntry(e.startTextDescription(t("live_hider.redact_words.hint")).build());
         general.addEntry(e.startStrList(t("live_hider.redact_words"), config.redactPatterns)
@@ -154,13 +159,57 @@ public final class LiveHiderConfigScreen {
             .setTooltip(t("live_hider.sanitize_chat.tooltip"))
             .setSaveConsumer(v -> config.sanitizeChatInput = v)
             .build());
-        // Skin obfuscation grouped under names (it hides what a player's skin could reveal).
-        names.addEntry(e.startStringDropdownMenu(t("live_hider.skin_mode"), config.skinMode)
-            .setDefaultValue("OFF")
-            .setSelections(java.util.List.of("OFF", "STEVE"))
-            .setTooltip(t("live_hider.skin_mode.tooltip"))
-            .setSaveConsumer(v -> config.skinMode = v)
+        // ---- Skin obfuscation ----
+        ConfigCategory skins = builder.getOrCreateCategory(t("live_hider.category.skins"));
+        skins.addEntry(e.startTextDescription(t("live_hider.skin.desc")).build());
+        skins.addEntry(e.startStringDropdownMenu(t("live_hider.skin_other_mode"), config.skinOtherMode)
+            .setDefaultValue("ORIGINAL")
+            .setSelections(java.util.List.of("ORIGINAL", "STEVE", "CUSTOM", "RANDOM"))
+            .setTooltip(t("live_hider.skin_other_mode.tooltip"))
+            .setSaveConsumer(v -> config.skinOtherMode = v)
             .build());
+        skins.addEntry(e.startStringDropdownMenu(t("live_hider.skin_self_mode"), config.skinSelfMode)
+            .setDefaultValue("ORIGINAL")
+            .setSelections(java.util.List.of("ORIGINAL", "STEVE", "CUSTOM", "RANDOM"))
+            .setTooltip(t("live_hider.skin_self_mode.tooltip"))
+            .setSaveConsumer(v -> config.skinSelfMode = v)
+            .build());
+        skins.addEntry(e.startStringDropdownMenu(t("live_hider.skin_source"), config.skinSource)
+            .setDefaultValue("MOJANG")
+            .setSelections(java.util.List.of("MOJANG", "LITTLESKIN", "ELYBY", "URL_TEMPLATE", "LOCAL_FOLDER"))
+            .setTooltip(t("live_hider.skin_source.tooltip"))
+            .setSaveConsumer(v -> config.skinSource = v)
+            .build());
+        skins.addEntry(new ActionButtonEntry(t("live_hider.skin.refresh"), t("live_hider.skin.refresh.tooltip"),
+            () -> applyRuleAction(() -> {})));
+        skins.addEntry(e.startTextField(t("live_hider.skin_custom"), config.skinCustomSkin)
+            .setDefaultValue("")
+            .setTooltip(t("live_hider.skin_custom.tooltip"))
+            .setSaveConsumer(v -> config.skinCustomSkin = v)
+            .build());
+        if ("URL_TEMPLATE".equalsIgnoreCase(config.skinSource)) {
+            skins.addEntry(e.startTextField(t("live_hider.skin_url_template"), config.skinUrlTemplate)
+                .setDefaultValue("")
+                .setTooltip(t("live_hider.skin_url_template.tooltip"))
+                .setSaveConsumer(v -> config.skinUrlTemplate = v)
+                .build());
+        } else if ("LOCAL_FOLDER".equalsIgnoreCase(config.skinSource)) {
+            skins.addEntry(e.startTextField(t("live_hider.skin_local_folder"), config.skinLocalFolder)
+                .setDefaultValue("")
+                .setTooltip(t("live_hider.skin_local_folder.tooltip"))
+                .setSaveConsumer(v -> config.skinLocalFolder = v)
+                .build());
+            int localSkinCount = livehider.skin.LocalSkinLookup.listPngFiles(config.skinLocalFolder).size();
+            skins.addEntry(e.startTextDescription(t("live_hider.skin.local_status", localSkinCount)).build());
+        } else {
+            skins.addEntry(e.startTextDescription(t("live_hider.skin_pool.hint")).build());
+            skins.addEntry(e.startStrList(t("live_hider.skin_pool"), config.skinRandomPool)
+                .setDefaultValue(new java.util.ArrayList<>())
+                .setTooltip(t("live_hider.skin_pool.tooltip"))
+                .setSaveConsumer(v -> config.skinRandomPool = new java.util.ArrayList<>(v))
+                .build());
+            skins.addEntry(e.startTextDescription(t("live_hider.skin.pool_status", config.skinRandomPool.size())).build());
+        }
 
         // ---- Items ----
         ConfigCategory items = builder.getOrCreateCategory(t("live_hider.category.items"));
