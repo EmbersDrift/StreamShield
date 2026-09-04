@@ -1,0 +1,27 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="MIT"
+
+[[mixins]]
+config="live_hider.neoforge.mixins.json"
+
+[[mods]]
+modId="live_hider"
+version="${version}"
+displayName="StreamShield"
+description='''Privacy tools for Minecraft streaming.'''
+displayTest="IGNORE_SERVER_VERSION"
+
+[[dependencies.live_hider]]
+modId="neoforge"
+type="required"
+versionRange="[${neoforge_version},)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.live_hider]]
+modId="minecraft"
+type="required"
+versionRange="[${minecraft_version},${minecraft_version}]"
+ordering="NONE"
+side="CLIENT"

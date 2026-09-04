@@ -55,7 +55,7 @@ public class ActionButtonEntry extends AbstractConfigListEntry<Void> {
 
     @Override
     public List<? extends net.minecraft.client.gui.components.events.GuiEventListener> children() {
-        int w = Math.max(80, lastWidth - 10);
+        int w = Math.min(160, Math.max(80, lastWidth - 10));
         int x = lastLeft + (lastWidth - w) / 2;
         int y = lastTop + (lastItemHeight - 20) / 2;
         if (button == null) {

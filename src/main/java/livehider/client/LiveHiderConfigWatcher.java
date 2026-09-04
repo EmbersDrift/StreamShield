@@ -34,6 +34,9 @@ public final class LiveHiderConfigWatcher {
                 return;
             }
             tickCount = 0;
+            if (LiveHiderConfigScreen.isActiveConfigScreen(client.screen)) {
+                return;
+            }
             long now = mtime(path);
             if (now != lastModified) {
                 lastModified = now;
@@ -42,6 +45,11 @@ public final class LiveHiderConfigWatcher {
                 }
             }
         });
+    }
+
+    /** Record a successful in-game save so the watcher does not reload the same file afterwards. */
+    public static void markCurrentFileState() {
+        lastModified = mtime(LiveHiderConfig.getPath());
     }
 
     private static long mtime(Path path) {

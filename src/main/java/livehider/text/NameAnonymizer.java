@@ -59,7 +59,7 @@ public final class NameAnonymizer {
             return;
         }
         // Strip Minecraft § format codes so the key is the readable name; skip pure-format strings.
-        String clean = realName.replaceAll("§.", "");
+        String clean = stripFormatCodes(realName);
         if (clean.isEmpty()) {
             return;
         }
@@ -115,9 +115,9 @@ public final class NameAnonymizer {
     private static String anonymousReplacement(LiveHiderConfig config, String name, UUID id) {
         int digits = Math.min(9, Math.max(1, config.nameDigits));
         long h = (id != null ? id.getLeastSignificantBits() : name.hashCode()) ^ salt;
-        int n = Math.abs((int) h);
         int modulo = (int) Math.pow(10, digits);
-        String num = String.format("%0" + digits + "d", n % modulo);
+        long n = Math.floorMod(h, (long) modulo);
+        String num = String.format("%0" + digits + "d", n);
         return config.nameTemplate + num;
     }
 
@@ -192,6 +192,12 @@ public final class NameAnonymizer {
         if (text == null || !isActive()) {
             return text;
         }
+        LiveHiderConfig config = LiveHiderConfig.get();
+        // A self-name replacement keeps the anonymizer active even when global anonymization is
+        // disabled. In that mode, exact scoreboard rows may rewrite the local player only.
+        if (config == null || (!config.anonymizeNames && !text.equals(ownName))) {
+            return text;
+        }
         String anon = map.get(text);
         return anon != null ? anon : text;
     }
@@ -206,7 +212,11 @@ public final class NameAnonymizer {
         if (text == null || !isActive()) {
             return text;
         }
-        String striped = text.replaceAll("§.", "");
+        String striped = stripFormatCodes(text);
+        LiveHiderConfig config = LiveHiderConfig.get();
+        if (config == null || (!config.anonymizeNames && !striped.equals(ownName))) {
+            return text;
+        }
         String anon = map.get(striped);
         return anon != null ? anon : text;
     }
@@ -276,5 +286,23 @@ public final class NameAnonymizer {
     }
 
     private record DisplayNameCacheEntry(Component source, boolean isSelf, Component result) {
+    }
+
+    /** Remove complete legacy formatting pairs without compiling a regex on player-list updates. */
+    private static String stripFormatCodes(String text) {
+        int marker = text.indexOf('§');
+        if (marker < 0) {
+            return text;
+        }
+        StringBuilder result = new StringBuilder(text.length());
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '§' && i + 1 < text.length()) {
+                i++;
+                continue;
+            }
+            result.append(c);
+        }
+        return result.toString();
     }
 }

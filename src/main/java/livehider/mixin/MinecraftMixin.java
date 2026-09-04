@@ -5,6 +5,7 @@ import livehider.overlay.OverlayRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.main.GameConfig;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -15,9 +16,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  */
 @Mixin(Minecraft.class)
 public class MinecraftMixin {
+    /** NeoForge finishes its first shader/resource reload after constructing Minecraft. */
+    @Unique
+    private int liveHider$neoForgeReadyTicks;
+
     @Inject(method = "<init>(Lnet/minecraft/client/main/GameConfig;)V", at = @At("RETURN"))
     private void constructor(GameConfig args, CallbackInfo ci) {
-        LiveHider.initRender();
+        if (!liveHider$isNeoForgePresent()) {
+            LiveHider.initRender();
+        }
     }
 
     @Inject(method = "resizeGui()V", at = @At("RETURN"))
@@ -30,9 +37,25 @@ public class MinecraftMixin {
 
     @Inject(method = "runTick(Z)V", at = @At("HEAD"))
     private void onRender(boolean tick, CallbackInfo ci) {
+        if (liveHider$isNeoForgePresent() && !LiveHider.getIsInitialized()
+            && ++this.liveHider$neoForgeReadyTicks >= 80) {
+            // Do not activate the native swap callback while vanilla is still
+            // building its GUI shader source cache during the initial reload.
+            LiveHider.initRender();
+        }
         OverlayRenderer renderer = LiveHider.getRenderer();
         if (renderer != null) {
             renderer.beginFrame();
+        }
+    }
+
+    @Unique
+    private static boolean liveHider$isNeoForgePresent() {
+        try {
+            Class.forName("net.neoforged.neoforge.common.NeoForge");
+            return true;
+        } catch (ClassNotFoundException ignored) {
+            return false;
         }
     }
 }

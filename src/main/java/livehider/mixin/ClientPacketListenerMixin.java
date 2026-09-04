@@ -2,6 +2,7 @@ package livehider.mixin;
 
 import livehider.text.NameAnonymizer;
 import livehider.text.Redactor;
+import livehider.skin.RandomSkinManager;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
@@ -20,6 +21,7 @@ public class ClientPacketListenerMixin {
     @Inject(method = "handleLogin(Lnet/minecraft/network/protocol/game/ClientboundLoginPacket;)V", at = @At("RETURN"))
     private void onJoin(ClientboundLoginPacket pkt, CallbackInfo ci) {
         NameAnonymizer.resetSession();
+        RandomSkinManager.resetSessionAssignments();
         NameAnonymizer.refreshFromConnection();
         Redactor.captureServer();
     }

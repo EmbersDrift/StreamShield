@@ -5,6 +5,7 @@ import livehider.api.impl.DummyOverlayAPI;
 import livehider.api.impl.NormalOverlayAPI;
 import livehider.component.AllDefaultOverlayComponents;
 import livehider.overlay.OverlayRenderer;
+import livehider.overlay.OverlayPipelines;
 import livehider.overlay.OverlayUtils;
 import livehider.text.Redactor;
 import net.minecraft.network.chat.Component;
@@ -46,6 +47,7 @@ public final class LiveHider {
     }
 
     public static void init() {
+        OverlayPipelines.initialize();
         LiveHiderConfig.init();
         AllDefaultOverlayComponents.init();
         LiveHiderConfig.ensureFile();

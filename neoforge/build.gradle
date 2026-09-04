@@ -1,0 +1,72 @@
+plugins {
+    id 'net.neoforged.moddev' version '2.0.146'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+repositories {
+    maven { url = "https://maven.architectury.dev/" }
+    maven { url = "https://maven.shedaniel.me/" }
+    mavenCentral()
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir '../src/main/java'
+            exclude 'livehider/LiveHiderClient.java'
+            exclude 'livehider/client/LiveHiderKeybinds.java'
+            exclude 'livehider/client/LiveHiderConfigWatcher.java'
+            exclude 'livehider/client/LiveHiderModMenu.java'
+        }
+        resources.srcDir '../src/main/resources'
+    }
+}
+
+neoForge {
+    version = project.neoforge_version
+    runs {
+        client {
+            client()
+        }
+    }
+    mods {
+        live_hider {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+dependencies {
+    implementation "dev.architectury:architectury-neoforge:${project.architectury_version}"
+    implementation "me.shedaniel.cloth:cloth-config-neoforge:${project.cloth_config_version}"
+    implementation "io.github.llamalad7:mixinextras-common:0.5.4"
+
+    jarJar(implementation("net.java.dev.jna:jna:5.19.1")) {
+        version { strictly '[5.19.1,6.0)' }
+    }
+    jarJar(implementation("commons-io:commons-io:2.22.0")) {
+        version { strictly '[2.22.0,3.0)' }
+    }
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 25
+}
+
+tasks.named('processResources', ProcessResources).configure {
+    exclude 'fabric.mod.json'
+    inputs.property 'version', project.version
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand version: project.version, minecraft_version: project.minecraft_version, neoforge_version: project.neoforge_version
+    }
+}
+
+tasks.withType(Jar).configureEach {
+    archiveFileName = "[${project.minecraft_version}]${project.archives_name}-${project.version}-neoforge.jar"
+}

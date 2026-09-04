@@ -1,0 +1,14 @@
+pluginManagement {
+    repositories {
+        maven { url = "https://maven.neoforged.net/releases" }
+        gradlePluginPortal()
+    }
+}
+
+plugins {
+    // MDG runs NeoForge's artifact toolchain on the required JDK 25. Download it
+    // automatically when the local machine only has a newer JDK installed.
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = "StreamShield-NeoForge"

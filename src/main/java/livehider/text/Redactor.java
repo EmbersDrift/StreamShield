@@ -37,18 +37,18 @@ public final class Redactor {
     private Redactor() {
     }
 
-    /** Load the bundled safetext preset word list (if enabled) into the static word set. */
-    private static void loadPreset() {
-        try (InputStream in = Redactor.class.getResourceAsStream("/assets/live_hider/redact_preset.txt")) {
+    /** Load one bundled word list into the static word set. */
+    private static void loadPreset(String resourcePath) {
+        try (InputStream in = Redactor.class.getResourceAsStream(resourcePath)) {
             if (in == null) {
-                LiveHider.LOGGER.warn("redact_preset.txt not found");
+                LiveHider.LOGGER.warn("Bundled redaction preset not found: {}", resourcePath);
                 return;
             }
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     String word = line.trim();
-                    if (!word.isEmpty()) {
+                    if (!word.isEmpty() && !word.startsWith("#")) {
                         staticWords.add(word);
                     }
                 }
@@ -63,11 +63,14 @@ public final class Redactor {
         staticWords.clear();
         LiveHiderConfig config = LiveHiderConfig.get();
         if (config != null && config.redactPresetEnabled) {
-            loadPreset();
+            loadPreset("/assets/live_hider/redact_preset.txt");
+        }
+        if (config != null && config.redactStrictPresetEnabled) {
+            loadPreset("/assets/live_hider/redact_strict_preset.txt");
         }
         Path wordsFile = Platform.getConfigFolder().resolve("live_hider_words.txt");
         if (Files.exists(wordsFile)) {
-            try (BufferedReader reader = Files.newBufferedReader(wordsFile)) {
+            try (BufferedReader reader = Files.newBufferedReader(wordsFile, StandardCharsets.UTF_8)) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     String word = line.trim();
@@ -193,7 +196,19 @@ public final class Redactor {
     }
 
     private static String stripFormatCodes(String s) {
-        return s == null ? null : s.replaceAll("§.", "");
+        if (s == null || s.indexOf('§') < 0) {
+            return s;
+        }
+        StringBuilder result = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '§' && i + 1 < s.length()) {
+                i++;
+                continue;
+            }
+            result.append(c);
+        }
+        return result.toString();
     }
 
     /**
