@@ -36,6 +36,8 @@ public final class LiveHiderConfig {
     public HashSet<String> overlayHandledScreensList = new HashSet<>();
     public transient HashSet<Class<?>> overlayScreensClasses = new HashSet<>();
     public boolean showTestIcon;
+    // Optional local hiding while the capture-excluded overlay is unavailable.
+    public boolean hideHudWhenOverlayUnavailable = false;
 
     // Stream-safe client display: renamed items show their localized vanilla name instead of the custom name.
     public boolean normalizeItemNames = true;
@@ -85,7 +87,7 @@ public final class LiveHiderConfig {
     public java.util.ArrayList<String> skinRandomPool = new java.util.ArrayList<>();
 
 
-    // Debug logging for matching (see logs for raw/stripped scoreboard text and match result).
+    // Diagnostic events only; never log original or replacement text.
     public boolean debugLog = false;
 
     public static void init() {

@@ -14,6 +14,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
 import livehider.component.IOverlayComponent;
+import livehider.LiveHider;
+import livehider.LiveHiderConfig;
+import livehider.mixin.accessor.GuiRendererAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.render.GuiRenderer;
@@ -27,6 +30,9 @@ import org.jetbrains.annotations.NotNull;
  * (which grabs the main target) does not. Ported from obs-overlay (MIT, author zziger).
  */
 public class OverlayRenderer implements Closeable {
+    private static final boolean NEOFORGE = detectNeoForge();
+    private final OverlayHook.Handler swapHandler = this::renderFrame;
+    private boolean closed;
     private boolean framebufferOverridden = false;
     private OverlayFramebuffer overlayFramebuffer;
     private final GuiRenderState overlayGuiState = new GuiRenderState();
@@ -35,20 +41,42 @@ public class OverlayRenderer implements Closeable {
 
     public OverlayRenderer() {
         OverlayHook.init();
-        OverlayHook.subscribe(this::renderFrame);
-        this.initializeFramebuffers();
+        try {
+            this.initializeFramebuffers();
+            this.resetGuiExtraction();
+            OverlayHook.subscribe(this.swapHandler);
+        } catch (RuntimeException | LinkageError error) {
+            close();
+            throw error;
+        }
     }
 
     @Override
     public void close() {
-        OverlayHook.unsubscribe(this::renderFrame);
+        if (this.closed) return;
+        this.closed = true;
+        OverlayHook.unsubscribe(this.swapHandler);
+        this.framebufferOverridden = false;
+        try {
+            if (this.overlayGuiRenderer != null) {
+                // Fabric borrows vanilla's PiP renderers. Never close those shared instances.
+                ((GuiRendererAccessor) this.overlayGuiRenderer).setPictureInPictureRenderers(Map.of());
+                this.overlayGuiRenderer.close();
+                this.overlayGuiRenderer = null;
+            }
+        } finally {
+            if (this.overlayFramebuffer != null) {
+                this.overlayFramebuffer.object.destroyBuffers();
+                this.overlayFramebuffer = null;
+            }
+        }
     }
 
     private void initializeFramebuffers() {
         Minecraft client = Minecraft.getInstance();
         RenderTarget simpleFramebuffer = new TextureTarget("Overlay Target", client.getWindow().getWidth(), client.getWindow().getHeight(), true);
-        clearFramebuffer(simpleFramebuffer);
         this.overlayFramebuffer = new OverlayFramebuffer(simpleFramebuffer);
+        clearFramebuffer(simpleFramebuffer);
     }
 
     private void markOverlayDirty() {
@@ -79,7 +107,7 @@ public class OverlayRenderer implements Closeable {
             // records. Construct reflectively so the shared overlay code remains binary-compatible
             // with Fabric; PiP renderers are intentionally omitted on NeoForge because they are
             // unrelated to the HUD components StreamShield redirects.
-            List<?> pipRenderers = isNeoForgePresent()
+            List<?> pipRenderers = NEOFORGE
                 ? List.of()
                 : ((Map<?, ?>) getField(copyFrom, "pictureInPictureRenderers")).values().stream().toList();
             Constructor<GuiRenderer> constructor = GuiRenderer.class.getConstructor(
@@ -102,7 +130,7 @@ public class OverlayRenderer implements Closeable {
         return this.overlayGuiRenderer;
     }
 
-    private static boolean isNeoForgePresent() {
+    private static boolean detectNeoForge() {
         try {
             Class.forName("net.neoforged.neoforge.common.NeoForge");
             return true;
@@ -136,7 +164,8 @@ public class OverlayRenderer implements Closeable {
             return DummyGuiGraphics.INSTANCE;
         }
         GuiGraphicsExtractor guiGraphics = this.getGuiGraphics();
-        return guiGraphics != null ? guiGraphics : original;
+        return guiGraphics != null ? guiGraphics
+            : LiveHiderConfig.get().hideHudWhenOverlayUnavailable ? DummyGuiGraphics.INSTANCE : original;
     }
 
     public void beginDraw() {
@@ -170,7 +199,7 @@ public class OverlayRenderer implements Closeable {
                 // On NeoForge use a vanilla full-screen blit pipeline.  It has
                 // the same screenquad/InSampler contract but is compiled by the
                 // game's own resource reload, rather than relying on a mod shader.
-                renderPass.setPipeline(isNeoForgePresent()
+                renderPass.setPipeline(NEOFORGE
                     ? RenderPipelines.ENTITY_OUTLINE_BLIT
                     : OverlayPipelines.OVERLAY_COMPOSITE);
                 RenderSystem.bindDefaultUniforms(renderPass);
@@ -208,7 +237,7 @@ public class OverlayRenderer implements Closeable {
     }
 
     public void renderFrame() {
-        if (this.overlayFramebuffer != null && this.overlayFramebuffer.dirty) {
+        if (!this.closed && LiveHider.getIsInitialized() && this.overlayFramebuffer != null && this.overlayFramebuffer.dirty) {
             this.overlayFramebuffer.dirty = false;
             renderQuad(this.overlayFramebuffer.object);
         }

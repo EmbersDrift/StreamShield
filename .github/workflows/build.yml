@@ -2,14 +2,14 @@ name: Build & Release
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'mc/26.1' ]
     tags: [ 'v*' ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, 'mc/26.1' ]
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -36,16 +36,55 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: live-hider-${{ github.ref_name }}
+          name: live-hider-${{ github.sha }}
+          if-no-files-found: error
           path: |
             build/libs/*.jar
             neoforge/build/libs/*.jar
 
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout release notes
+        uses: actions/checkout@v4
+
+      - name: Download tested build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: live-hider-${{ github.sha }}
+          path: release-artifacts
+
+      - name: Extract this version's changelog
+        id: notes
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $properties = Get-Content -Raw -Encoding UTF8 gradle.properties
+          $versionMatch = [regex]::Match($properties, '(?m)^mod_version\s*=\s*(\S+)\s*$')
+          if (-not $versionMatch.Success) { throw 'mod_version is missing.' }
+          $version = $versionMatch.Groups[1].Value
+          $escapedVersion = [regex]::Escape($version)
+          if ($env:RELEASE_TAG -notmatch "^v$escapedVersion(?:$|[-+])") {
+            throw 'Release tag does not match mod_version.'
+          }
+          $changelog = Get-Content -Raw -Encoding UTF8 docs/CHANGELOG.md
+          $section = [regex]::Match($changelog, "(?ms)^## v$escapedVersion(?:[ \t]+[^\r\n]*)?\r?\n(?<body>.*?)(?=^## |\z)")
+          if (-not $section.Success -or [string]::IsNullOrWhiteSpace($section.Groups['body'].Value)) {
+            throw "No changelog entry found for v$version."
+          }
+          $notesPath = Join-Path $env:RUNNER_TEMP 'streamshield-release-notes.md'
+          Set-Content -LiteralPath $notesPath -Value $section.Groups['body'].Value.Trim() -Encoding utf8
+          "path=$notesPath" >> $env:GITHUB_OUTPUT
+
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            build/libs/*.jar
-            neoforge/build/libs/*.jar
-          generate_release_notes: true
+          files: release-artifacts/**/*.jar
+          fail_on_unmatched_files: true
+          body_path: ${{ steps.notes.outputs.path }}
+          generate_release_notes: false

@@ -1,41 +1,47 @@
 # StreamShield
 
-StreamShield is a Fabric client mod for stream-safe Minecraft gameplay. It rewrites sensitive text only on your client and can redirect selected HUD elements away from OBS capture, helping keep player names, server details, renamed items, and on-screen UI out of your stream.
+**StreamShield** is a client-side privacy mod for Minecraft streaming. It rewrites sensitive text only on your client and can keep selected HUD elements out of OBS Game Capture while they remain visible in-game.
+
+Available for **Fabric** and **NeoForge** on Minecraft **1.21.11** and **26.1.x** (tested on 26.1.2).
 
 ## Highlights
 
-- **Player-name privacy** — anonymize other players with stable per-session aliases.
-- **Self-name modes** — hide your name, use a custom nickname, keep your real name, or use a randomized alias. Your self-name mode takes priority across name tags, TAB, chat, scoreboards, and chat-input sanitization.
-- **Chat-input sanitization** — independently hide known player names while you type; it does not modify the message that is actually sent.
-- **Text redaction** — redact configured words, the current server address/name, and bundled safety-list entries.
-- **Scoreboard rules** — ordered match-and-replace rules with enable, add, delete, and move controls.
-- **Localized item-name normalization** — renamed items display their vanilla localized name on your client. This is display-only and does not alter anvil input or server-side item data.
-- **Skin obfuscation** — optionally render players with the default Steve skin.
-- **OBS overlay** — redirect selected HUD components away from OBS capture while keeping them visible to you. Windows only.
+- **Player-name privacy** — replaces other player names with stable, per-session aliases across name tags, TAB, chat, and scoreboards.
+- **Self-name modes** — hide your own name, use a custom formatted nickname, keep your real name, or use a random alias. Your chosen self-name mode takes priority everywhere.
+- **Chat-input sanitization** — optionally hides known player names while you type without changing the message actually sent to the server.
+- **Text redaction** — hides configured words, server addresses, server names, and optional strict safety-list terms in rendered text.
+- **Scoreboard rules** — create ordered match-and-replace rules with enable, add, delete, and move controls.
+- **Localized item-name normalization** — renamed items display their normal localized Minecraft name on your client only; item data, anvil input, and server behavior are unchanged.
+- **Skin obfuscation** — render players with Steve, or assign configurable substitute skins from a Mojang-account ID pool.
+- **OBS overlay** — redirects selected HUD components, including chat, TAB, scoreboards, titles, effects, hotbar, health, armor, hunger, air, vehicle health, and experience, away from OBS capture while keeping them visible to you. Windows only.
 
-## Compatibility
+## Compatibility and requirements
 
-Install the version whose Minecraft version is marked on the release page.
+Choose the jar matching both your Minecraft version and mod loader.
+
+| Loader | Required dependencies |
+| --- | --- |
+| Fabric | Fabric Loader, Fabric API, Architectury API, Cloth Config API |
+| NeoForge | NeoForge, Architectury API (NeoForge), Cloth Config API (NeoForge) |
 
 | Minecraft | Java |
 | --- | --- |
 | 1.21.11 | 21+ |
-| 26.1–26.1.2 | 25+ |
+| 26.1.x | 25+ |
 
-Required dependencies: Fabric Loader, Fabric API, Architectury API, and Cloth Config API. Mod Menu is optional and adds a Configure button.
+Mod Menu is optional on Fabric and provides a convenient **Configure** button. The OBS overlay is Windows-only and is intended for OBS Game Capture; test your capture setup before streaming.
 
 ## Usage
 
-Open the mod's Configure screen from Mod Menu. Settings are grouped into redaction, names, items, scoreboards, and overlay controls.
+Open the mod's Configure screen to manage redaction, names, items, scoreboards, skins, and OBS-overlay behavior.
 
-For custom self names, legacy formatting is supported with `§` codes or `&` aliases. For example, `&d&lStreamer` is rendered as a light-purple bold name; use `&&` for a literal ampersand.
+Custom self names support Minecraft legacy formatting codes such as `§d§l`, plus `&` aliases such as `&d&l`. Use `&&` for a literal ampersand.
 
 ## Important notes
 
-- StreamShield changes **client-side presentation only**. It does not change server data or the text you send in chat.
-- The OBS overlay uses a Windows native hook and is intended for OBS Game Capture. Test it before going live.
+- StreamShield changes client-side presentation only. It does not alter server data or outgoing chat messages.
 - Some server-rendered scoreboards use unusual rendering paths and may not be fully rewriteable.
 
 ## License and attribution
 
-StreamShield is licensed under MIT. Its OBS overlay implementation is ported from [obs-overlay](https://github.com/zziger/obs-overlay) by zziger / Artem Dzhemesiuk, also under MIT; the included NOTICE and license files preserve the required attribution.
+StreamShield is released under the **MIT License**. Its OBS overlay implementation is ported from [obs-overlay](https://github.com/zziger/obs-overlay) by **zziger / Artem Dzhemesiuk**, also under MIT. The required notice and license are bundled with the mod.

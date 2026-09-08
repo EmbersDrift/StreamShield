@@ -6,16 +6,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.network.chat.Component;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Maps real player names to anonymized {@code [Player]#nnn} names for a single session.
@@ -24,11 +20,10 @@ import java.util.regex.Pattern;
  */
 public final class NameAnonymizer {
     private static final Map<String, String> map = new HashMap<>();
-    private static final Map<String, Pattern> patternCache = new HashMap<>();
     // Name tags and the TAB overlay request the same display component every render frame. Keep
     // their rewritten form per player instead of running the full text/regex pipeline every time.
     private static final Map<UUID, DisplayNameCacheEntry> displayNameCache = new HashMap<>();
-    private static List<String> sortedNames = new ArrayList<>();
+    private static NameReplacementTable replacements = new NameReplacementTable(Map.of(), null);
     private static String ownName;
     private static long salt;
     private static boolean active;
@@ -40,11 +35,11 @@ public final class NameAnonymizer {
     public static void resetSession() {
         salt = new Random().nextLong();
         map.clear();
-        patternCache.clear();
         displayNameCache.clear();
-        sortedNames = new ArrayList<>();
+        replacements = new NameReplacementTable(Map.of(), null);
         ownName = null;
         active = true;
+        revealInput = false;
     }
 
     /** Drop render-path display-name results after a configuration reload/save. */
@@ -59,7 +54,7 @@ public final class NameAnonymizer {
             return;
         }
         // Strip Minecraft § format codes so the key is the readable name; skip pure-format strings.
-        String clean = stripFormatCodes(realName);
+        String clean = LegacyFormatCodes.strip(realName);
         if (clean.isEmpty()) {
             return;
         }
@@ -70,22 +65,19 @@ public final class NameAnonymizer {
             ownName = clean;
             String replacement = selfNameReplacement(config, clean, id);
             String previous = replacement == null ? map.remove(clean) : map.put(clean, replacement);
-            patternCache.remove(clean);
             if (!Objects.equals(previous, replacement)) {
                 displayNameCache.clear();
-                rebuildSortedNames();
+                rebuildReplacements();
             }
             return;
         }
-        if (map.containsKey(clean)) {
-            return;
+        // Recompute on configuration refresh too; the salt keeps aliases stable within this session.
+        String replacement = anonymousReplacement(config, clean, id);
+        if (!Objects.equals(map.put(clean, replacement), replacement)) {
+            // A newly known player can appear inside another player's decorated nickname.
+            displayNameCache.clear();
+            rebuildReplacements();
         }
-        map.put(clean, anonymousReplacement(config, clean, id));
-        patternCache.remove(clean);
-        // A newly known player can appear inside another player's decorated nickname.
-        displayNameCache.clear();
-        // Re-sort the cached name list (build after current size, amortised — cheap relative to old per-call sort).
-        rebuildSortedNames();
     }
 
     /** True when {@code name} is the local player's own real (profile) name. */
@@ -121,9 +113,8 @@ public final class NameAnonymizer {
         return config.nameTemplate + num;
     }
 
-    private static void rebuildSortedNames() {
-        sortedNames = new ArrayList<>(map.keySet());
-        sortedNames.sort((a, b) -> b.length() - a.length());
+    private static void rebuildReplacements() {
+        replacements = new NameReplacementTable(map, ownName);
     }
 
     public static boolean isActive() {
@@ -166,19 +157,10 @@ public final class NameAnonymizer {
         if (text == null || !active || map.isEmpty() || (!includeAllNames && !hasSelfReplacement())) {
             return text;
         }
-        List<String> names = sortedNames;
-        String result = text;
-        for (String name : names) {
-            if (!includeAllNames && !name.equals(ownName)) {
-                continue;
-            }
-            String anon = map.get(name);
-            Pattern p = patternCache.computeIfAbsent(name, n -> Pattern.compile("(?<!\\w)" + Pattern.quote(n) + "(?!\\w)"));
-            result = p.matcher(result).replaceAll(Matcher.quoteReplacement(anon));
-        }
+        String result = replacements.replace(text, includeAllNames);
         LiveHiderConfig config = LiveHiderConfig.get();
         if (config != null && config.debugLog && !result.equals(text)) {
-            LiveHider.LOGGER.info("[LiveHider][name] \"{}\" -> \"{}\"", text, result);
+            LiveHider.LOGGER.info("[LiveHider][name] Rewrote rendered text (content omitted)");
         }
         return result;
     }
@@ -195,11 +177,7 @@ public final class NameAnonymizer {
         LiveHiderConfig config = LiveHiderConfig.get();
         // A self-name replacement keeps the anonymizer active even when global anonymization is
         // disabled. In that mode, exact scoreboard rows may rewrite the local player only.
-        if (config == null || (!config.anonymizeNames && !text.equals(ownName))) {
-            return text;
-        }
-        String anon = map.get(text);
-        return anon != null ? anon : text;
+        return config == null ? text : replacements.replaceExact(text, config.anonymizeNames);
     }
 
     /**
@@ -212,13 +190,10 @@ public final class NameAnonymizer {
         if (text == null || !isActive()) {
             return text;
         }
-        String striped = stripFormatCodes(text);
+        String stripped = LegacyFormatCodes.strip(text);
         LiveHiderConfig config = LiveHiderConfig.get();
-        if (config == null || (!config.anonymizeNames && !striped.equals(ownName))) {
-            return text;
-        }
-        String anon = map.get(striped);
-        return anon != null ? anon : text;
+        String result = config == null ? stripped : replacements.replaceExact(stripped, config.anonymizeNames);
+        return result.equals(stripped) ? text : result;
     }
 
     /** (Re)populate the name map from the connection's online players and the world's player entities. */
@@ -288,21 +263,4 @@ public final class NameAnonymizer {
     private record DisplayNameCacheEntry(Component source, boolean isSelf, Component result) {
     }
 
-    /** Remove complete legacy formatting pairs without compiling a regex on player-list updates. */
-    private static String stripFormatCodes(String text) {
-        int marker = text.indexOf('§');
-        if (marker < 0) {
-            return text;
-        }
-        StringBuilder result = new StringBuilder(text.length());
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (c == '§' && i + 1 < text.length()) {
-                i++;
-                continue;
-            }
-            result.append(c);
-        }
-        return result.toString();
-    }
 }

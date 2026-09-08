@@ -8,6 +8,7 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.MultiBufferSource.BufferSource;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 /**
@@ -27,4 +28,8 @@ public interface GuiRendererAccessor {
 
     @Accessor("pictureInPictureRenderers")
     Map<Class<? extends PictureInPictureRenderState>, PictureInPictureRenderer<?>> getPictureInPictureRenderers();
+
+    @Mutable
+    @Accessor("pictureInPictureRenderers")
+    void setPictureInPictureRenderers(Map<Class<? extends PictureInPictureRenderState>, PictureInPictureRenderer<?>> renderers);
 }

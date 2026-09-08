@@ -7,6 +7,7 @@ import net.minecraft.network.chat.Component;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 
 /**
  * A Cloth Config list entry that renders a vanilla {@link Button}; clicking it invokes
@@ -17,6 +18,7 @@ import java.util.Optional;
 public class ActionButtonEntry extends AbstractConfigListEntry<Void> {
     private final Component buttonText;
     private final Runnable onClick;
+    private final BooleanSupplier enabled;
     private Button button;
     private int lastLeft;
     private int lastTop;
@@ -24,9 +26,14 @@ public class ActionButtonEntry extends AbstractConfigListEntry<Void> {
     private int lastItemHeight;
 
     public ActionButtonEntry(Component fieldName, Component buttonText, Runnable onClick) {
+        this(fieldName, buttonText, onClick, () -> true);
+    }
+
+    public ActionButtonEntry(Component fieldName, Component buttonText, Runnable onClick, BooleanSupplier enabled) {
         super(fieldName, false);
         this.buttonText = buttonText;
         this.onClick = onClick;
+        this.enabled = enabled;
     }
 
     @Override
@@ -65,6 +72,7 @@ public class ActionButtonEntry extends AbstractConfigListEntry<Void> {
             button.setY(y);
             button.setWidth(w);
         }
+        button.active = enabled.getAsBoolean();
         return java.util.Collections.singletonList(button);
     }
 
@@ -92,6 +100,7 @@ public class ActionButtonEntry extends AbstractConfigListEntry<Void> {
             button.setY(y);
             button.setWidth(w);
         }
+        button.active = enabled.getAsBoolean();
         button.extractRenderState(graphics, mouseX, mouseY, partialTicks);
     }
 

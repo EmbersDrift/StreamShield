@@ -25,3 +25,17 @@ type="required"
 versionRange="[${minecraft_version},${minecraft_version}]"
 ordering="NONE"
 side="CLIENT"
+
+[[dependencies.live_hider]]
+modId="architectury"
+type="required"
+versionRange="[${architectury_version},)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.live_hider]]
+modId="cloth_config"
+type="required"
+versionRange="[${cloth_config_version},)"
+ordering="NONE"
+side="CLIENT"

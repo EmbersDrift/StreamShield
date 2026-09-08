@@ -1,0 +1,48 @@
+// Shared release metadata and test setup for both loaders in this worktree.
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}
+
+def buildCommit = providers.provider {
+    try {
+        def result = providers.exec {
+            workingDir project.projectDir
+            commandLine 'git', 'rev-parse', '--short=12', 'HEAD'
+            ignoreExitValue = true
+        }
+        return result.result.get().exitValue == 0 ? result.standardOutput.asText.get().trim() : 'unknown'
+    } catch (Exception ignored) {
+        // Source archives may not contain Git metadata or have Git installed.
+        return 'unknown'
+    }
+}
+def buildInfoDirectory = layout.buildDirectory.dir('generated/resources/build-info')
+def generateBuildInfo = tasks.register('generateBuildInfo') {
+    inputs.property 'version', project.version.toString()
+    inputs.property 'minecraft', project.minecraft_version
+    inputs.property 'loader', project.releaseLoader
+    inputs.property 'commit', buildCommit
+    outputs.dir buildInfoDirectory
+    doLast {
+        def target = buildInfoDirectory.get().file('live_hider-build.properties').asFile
+        target.parentFile.mkdirs()
+        // Properties.store adds a timestamp; explicit UTF-8 lines keep this deterministic.
+        target.setText(['version', 'minecraft', 'loader', 'commit'].collect {
+            "${it}=${inputs.properties[it]}"
+        }.join('\n') + '\n', 'UTF-8')
+    }
+}
+sourceSets.main.resources.srcDir(buildInfoDirectory)
+tasks.named('processResources').configure {
+    dependsOn generateBuildInfo
+}
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}

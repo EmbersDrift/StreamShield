@@ -4,7 +4,7 @@
   "compatibilityLevel": "JAVA_21",
   "minVersion": "0.8",
   "client": [
-    "accessor.GuiGraphicsAccessor", "accessor.SkinManagerInvoker", "GuiRendererMixin", "GameRendererMixin", "MinecraftMixin", "ScreenMixin", "ClientPacketListenerMixin",
+    "accessor.GuiGraphicsAccessor", "accessor.GuiRendererAccessor", "accessor.SkinManagerInvoker", "GuiRendererMixin", "GameRendererMixin", "MinecraftMixin", "ScreenMixin", "ClientPacketListenerMixin",
     "components.DebugHudMixin", "neoforge.GuiMixin", "components.ChatHudMixin", "components.PlayerListHudMixin", "components.SubtitlesHudMixin", "components.ChatScreenMixin", "components.ChatNameMixin", "components.NameTagMixin", "components.TabNameMixin", "components.ChatInputMixin", "components.GuiTextMixin", "components.ScoreboardTitleMixin", "components.ScoreboardLineMixin", "components.EditBoxInputMixin", "components.PlayerSkinMixin"
   ],
   "injectors": { "defaultRequire": 1 }

@@ -63,6 +63,15 @@ public final class LiveHiderConfigScreen {
         return activeConfigScreen == screen;
     }
 
+    private static void openPreflight() {
+        // Apply the visible values first so the report describes the settings the user just chose.
+        if (activeConfigScreen != null) {
+            activeConfigScreen.saveAll(false);
+        }
+        net.minecraft.client.Minecraft.getInstance()
+            .setScreen(LiveHiderPreflightScreen.create(create(parentScreen)));
+    }
+
     /** Extract the last path segment (after the final '.') from a component id, e.g. "live_hider.live_hider.debug_menu" -> "debug_menu". */
     private static String lastSegment(String id) {
         int dot = id.lastIndexOf('.');
@@ -287,6 +296,17 @@ public final class LiveHiderConfigScreen {
         // ---- Overlay (obs-overlay HUD concealer) ----
         ConfigCategory overlayCat = builder.getOrCreateCategory(t("live_hider.category.overlay"));
         overlayCat.addEntry(e.startTextDescription(t("live_hider.overlay.desc")).build());
+        overlayCat.addEntry(new LiveStatusEntry(t("live_hider.preflight.title"),
+            LiveHiderPreflightScreen::overlayStatusText));
+        overlayCat.addEntry(e.startTextDescription(t("live_hider.preflight.open_hint")).build());
+        overlayCat.addEntry(new ActionButtonEntry(t("live_hider.preflight.title"),
+            t("live_hider.preflight.title"), LiveHiderConfigScreen::openPreflight));
+        overlayCat.addEntry(e.startBooleanToggle(t("live_hider.overlay.hide_on_failure"),
+                config.hideHudWhenOverlayUnavailable)
+            .setDefaultValue(false)
+            .setTooltip(t("live_hider.overlay.hide_on_failure.tooltip"))
+            .setSaveConsumer(v -> config.hideHudWhenOverlayUnavailable = v)
+            .build());
         overlayCat.addEntry(e.startBooleanToggle(t("live_hider.overlay.hide_all_screens"), config.hideAllScreens)
             .setDefaultValue(false)
             .setTooltip(t("live_hider.overlay.hide_all_screens.tooltip"))

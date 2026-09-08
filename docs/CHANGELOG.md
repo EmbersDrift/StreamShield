@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.1.1
 
 ### Added
 
@@ -11,6 +11,7 @@
 - Added localized, client-display-only normalization for renamed item names.
 - Added score-rule move up/down controls and clearer configuration tooltips.
 - Added Modrinth and CurseForge release descriptions.
+- Added NeoForge builds for Minecraft 1.21.11 and 26.1.x.
 
 ### Changed
 
@@ -22,6 +23,8 @@
 - Scoreboard format-code stripping no longer compiles a regular expression for every rendered row.
 - Rule add, delete, and move operations retain other unsaved edits before reopening the configuration page.
 - Formatting-code input handling is restricted to the StreamShield configuration screen and no longer affects unrelated text fields.
+- Updated the OBS overlay renderer for NeoForge's layered GUI pipeline and its vanilla full-screen compositor.
+- NeoForge now delays OBS-overlay initialization until after the initial resource-loading period.
 
 ### Fixed
 
@@ -30,3 +33,5 @@
 - Avoided applying player-name processing to non-player entity name tags, improving busy-area performance.
 - Fixed scoreboards anonymizing other players when global name anonymization was disabled but a self-name mode was active.
 - Made malformed or partially edited configuration files resilient to null values and empty rule entries.
+- Fixed NeoForge HUD routing so health, armor, hunger, air, vehicle health, hotbar, and experience are excluded from OBS captures.
+- Fixed NeoForge startup failures caused by version-specific GUI mixin signatures and early configuration initialization.

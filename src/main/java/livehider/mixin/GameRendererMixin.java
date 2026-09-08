@@ -52,10 +52,17 @@ public abstract class GameRendererMixin {
         if (LiveHider.getIsInitialized()) {
             OverlayRenderer overlayRenderer = LiveHider.getRenderer();
             assert overlayRenderer != null;
-            GuiRenderer custom = overlayRenderer.getOverlayGuiRenderer(instance);
-            overlayRenderer.beginDraw();
-            custom.render(fogBuffer);
-            overlayRenderer.endDraw();
+            try {
+                GuiRenderer custom = overlayRenderer.getOverlayGuiRenderer(instance);
+                overlayRenderer.beginDraw();
+                try {
+                    custom.render(fogBuffer);
+                } finally {
+                    overlayRenderer.endDraw();
+                }
+            } catch (RuntimeException | LinkageError error) {
+                LiveHider.reportOverlayFailure("GUI_RENDER_FAILED");
+            }
         }
     }
 

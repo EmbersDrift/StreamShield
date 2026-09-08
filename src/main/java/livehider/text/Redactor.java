@@ -14,14 +14,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Content redaction engine: replaces configured keywords/regex with a safe placeholder
+ * Content redaction engine: replaces configured literal keywords with a safe placeholder
  * (e.g. {@code ***}). Words come from (1) the bundled safetext preset list, (2) a word file
  * the user drops in {@code config/live_hider_words.txt}, (3) {@code redactPatterns} in the
  * config, and (4) the current server IP/name (auto-grab). Used by {@link SafeText}.
@@ -30,7 +29,7 @@ public final class Redactor {
     private static final Set<String> staticWords = new HashSet<>();
     private static final Set<String> runtimeWords = new HashSet<>();
     private static Pattern combinedPattern;
-    private static List<CompiledScoreboardRule> compiledScoreboardRules = List.of();
+    private static ScoreboardRuleChain scoreboardRules = new ScoreboardRuleChain(List.of());
     private static String replacement = "***";
     private static boolean patternDirty = true;
 
@@ -88,19 +87,7 @@ public final class Redactor {
 
     /** Compile literal scoreboard rules when configuration changes, never while rendering HUD text. */
     private static void compileScoreboardRules(LiveHiderConfig config) {
-        if (config == null || config.scoreboardRules == null) {
-            compiledScoreboardRules = List.of();
-            return;
-        }
-        List<CompiledScoreboardRule> rules = new ArrayList<>();
-        for (livehider.ScoreboardRule rule : config.scoreboardRules) {
-            if (rule == null || !rule.enabled || rule.key == null || rule.key.isEmpty()) {
-                continue;
-            }
-            Pattern pattern = Pattern.compile("(?i)(?<!\\w)" + Pattern.quote(rule.key) + "(?!\\w)");
-            rules.add(new CompiledScoreboardRule(pattern, rule.replacement != null ? rule.replacement : ""));
-        }
-        compiledScoreboardRules = List.copyOf(rules);
+        scoreboardRules = new ScoreboardRuleChain(config == null ? null : config.scoreboardRules);
     }
 
     public static void addRuntimeWord(String word) {
@@ -146,7 +133,11 @@ public final class Redactor {
             all.addAll(runtimeWords);
             StringBuilder sb = new StringBuilder();
             boolean first = true;
-            for (String word : all) {
+            // Prefer full addresses/phrases over shorter overlapping entries.
+            List<String> ordered = all.stream().filter(java.util.Objects::nonNull)
+                .sorted(java.util.Comparator.comparingInt(String::length).reversed()
+                    .thenComparing(java.util.Comparator.naturalOrder())).toList();
+            for (String word : ordered) {
                 if (word == null || word.isEmpty()) {
                     continue;
                 }
@@ -175,7 +166,7 @@ public final class Redactor {
         String result = pattern.matcher(text).replaceAll(Matcher.quoteReplacement(replacement));
         LiveHiderConfig config = LiveHiderConfig.get();
         if (config != null && config.debugLog && !result.equals(text)) {
-            LiveHider.LOGGER.info("[LiveHider][redact] \"{}\" -> \"{}\"", text, result);
+            LiveHider.LOGGER.info("[LiveHider][redact] Rewrote rendered text (content omitted)");
         }
         return result;
     }
@@ -185,30 +176,7 @@ public final class Redactor {
         if (config == null || config.scoreboardRules == null || !config.scoreboardEnabled) {
             return text;
         }
-        String result = text;
-        for (CompiledScoreboardRule rule : compiledScoreboardRules) {
-            result = rule.pattern.matcher(result).replaceAll(Matcher.quoteReplacement(rule.replacement));
-        }
-        return result;
-    }
-
-    private record CompiledScoreboardRule(Pattern pattern, String replacement) {
-    }
-
-    private static String stripFormatCodes(String s) {
-        if (s == null || s.indexOf('§') < 0) {
-            return s;
-        }
-        StringBuilder result = new StringBuilder(s.length());
-        for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            if (c == '§' && i + 1 < s.length()) {
-                i++;
-                continue;
-            }
-            result.append(c);
-        }
-        return result.toString();
+        return scoreboardRules.apply(text);
     }
 
     /**
@@ -224,7 +192,7 @@ public final class Redactor {
         if (text == null) {
             return text;
         }
-        String stripped = stripFormatCodes(text);
+        String stripped = LegacyFormatCodes.strip(text);
         String result = stripped;
         LiveHiderConfig config = LiveHiderConfig.get();
         if (config != null) {
@@ -233,10 +201,8 @@ public final class Redactor {
             // 2. Player-name anonymization, exact whole-line only.
             result = NameAnonymizer.applyExact(result);
         }
-        if (config != null && config.debugLog) {
-            LiveHider.LOGGER.info(
-                "[LiveHider][scoreboard] raw=\"{}\" stripped=\"{}\" result=\"{}\" changed={}",
-                text, stripped, result, !result.equals(stripped));
+        if (config != null && config.debugLog && !result.equals(stripped)) {
+            LiveHider.LOGGER.info("[LiveHider][scoreboard] Rewrote rendered text (content omitted)");
         }
         // Only rewrite if something actually matched; otherwise keep the original (formatting intact).
         return result.equals(stripped) ? text : result;
@@ -253,7 +219,6 @@ public final class Redactor {
         if (text == null) {
             return text;
         }
-        String stripped = stripFormatCodes(text);
         String result = text;
         LiveHiderConfig config = LiveHiderConfig.get();
         if (config != null) {
@@ -263,12 +228,7 @@ public final class Redactor {
             result = NameAnonymizer.applyExactStrip(result);
         }
         if (config != null && config.debugLog && !result.equals(text)) {
-            LiveHider.LOGGER.info(
-                "[LiveHider][sbro2] raw=\"{}\" stripped=\"{}\" result=\"{}\"",
-                text, stripped, result);
-        }
-        if (config != null && config.debugLog && result.contains("\u00A7")) {
-            LiveHider.LOGGER.info("[LiveHider][sbro2] result contains §: {}", result);
+            LiveHider.LOGGER.info("[LiveHider][scoreboard-row] Rewrote rendered text (content omitted)");
         }
         return result;
     }
