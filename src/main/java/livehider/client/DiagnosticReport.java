@@ -17,6 +17,7 @@ final class DiagnosticReport {
         "NATIVE_LIBRARY_FAILED", "NATIVE_SYMBOL_MISSING");
     private static final String[] SETTINGS = {
         "configurationAvailable", "anonymizeNames", "sanitizeChatInput", "redactEnabled",
+        "filterSignText", "hideSignText",
         "autoGrabServer", "redactPresetEnabled", "redactStrictPresetEnabled", "normalizeItemNames",
         "scoreboardEnabled", "hideAllScreens", "overlayHandledScreensEnabled",
         "hideHudWhenOverlayUnavailable", "showTestIcon", "debugLog"
@@ -110,4 +111,3 @@ final class DiagnosticReport {
         return result;
     }
 }
-

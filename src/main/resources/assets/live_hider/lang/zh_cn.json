@@ -1,4 +1,9 @@
 {
+  "key.live_hider.open_config": "打开 StreamShield 配置",
+  "live_hider.sign_filter": "过滤告示牌屏蔽词",
+  "live_hider.sign_filter.tooltip": "对世界中所有原版告示牌的正反面应用屏蔽词规则。需要开启文本遮蔽；不修改编辑内容。",
+  "live_hider.sign_blank": "告示牌文字全部留白",
+  "live_hider.sign_blank.tooltip": "隐藏世界中告示牌两面的全部文字，保留牌子外观。优先于屏蔽词过滤；不修改服务器数据。",
   "live_hider.title": "StreamShield",
   "live_hider.overlay.hide_on_failure": "\u906e\u7f69\u4e0d\u53ef\u7528\u65f6\u5728\u672c\u5730\u9690\u85cf\u6240\u9009 HUD",
   "live_hider.overlay.hide_on_failure.tooltip": "\u906e\u7f69\u5c1a\u672a\u5c31\u7eea\u6216\u53d1\u751f\u6545\u969c\u65f6\uff0c\u4e5f\u4ece\u4f60\u81ea\u5df1\u7684\u6e38\u620f\u753b\u9762\u4e2d\u9690\u85cf\u6240\u9009 HUD\u3002\u9ed8\u8ba4\u5173\u95ed\uff1b\u542f\u7528\u540e\uff0c\u6e38\u73a9\u65f6\u53ef\u80fd\u770b\u4e0d\u5230\u751f\u547d\u503c\u548c\u5feb\u6377\u680f\u7b49\u4fe1\u606f\u3002",

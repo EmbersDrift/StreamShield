@@ -1,11 +1,15 @@
 {
   "required": true,
   "package": "livehider.mixin",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_25",
   "minVersion": "0.8",
   "client": [
+    "accessor.SurfaceAccessor",
+    "GuiLifecycleMixin",
+    "components.SignTextMixin",
     "accessor.GuiGraphicsAccessor",
     "accessor.GuiRendererAccessor",
+    "accessor.RenderPipelinesAccessor",
     "accessor.SkinManagerInvoker",
     "GuiRendererMixin",
     "GameRendererMixin",

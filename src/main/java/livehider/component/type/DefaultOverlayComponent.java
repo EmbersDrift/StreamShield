@@ -71,7 +71,7 @@ public abstract class DefaultOverlayComponent implements IOverlayComponent {
         if (!this.isAutoHideEnabled()) {
             return false;
         }
-        Screen currentScreen = Minecraft.getInstance().screen;
+        Screen currentScreen = Minecraft.getInstance().gui.screen();
         return currentScreen != null && !OverlayComponentRegistry.ignoredScreens.contains(currentScreen.getClass());
     }
 }

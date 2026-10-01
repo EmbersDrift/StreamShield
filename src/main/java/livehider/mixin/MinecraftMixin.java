@@ -18,11 +18,6 @@ public class MinecraftMixin {
         LiveHider.resourcesLoaded();
     }
 
-    @Inject(method = "setOverlay", at = @At("HEAD"))
-    private void resourcesLoading(Overlay overlay, CallbackInfo ci) {
-        if (overlay instanceof LoadingOverlay) LiveHider.resourcesLoading();
-    }
-
     @Inject(method = "resizeGui()V", at = @At("RETURN"))
     private void onResolutionChanged(CallbackInfo ci) {
         OverlayRenderer renderer = LiveHider.getRenderer();
@@ -35,7 +30,7 @@ public class MinecraftMixin {
         }
     }
 
-    @Inject(method = "runTick(Z)V", at = @At("HEAD"))
+    @Inject(method = "renderFrame(Z)V", at = @At("HEAD"))
     private void onRender(boolean tick, CallbackInfo ci) {
         LiveHider.beginOverlayFrame();
     }

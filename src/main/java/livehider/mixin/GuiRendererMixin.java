@@ -15,8 +15,8 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(GuiRenderer.class)
 public class GuiRendererMixin {
     @ModifyExpressionValue(
-        method = "draw(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V",
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;getMainRenderTarget()Lcom/mojang/blaze3d/pipeline/RenderTarget;")
+        method = "draw()V",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;mainRenderTarget()Lcom/mojang/blaze3d/pipeline/RenderTarget;")
     )
     private RenderTarget overriddenTarget(RenderTarget original) {
         OverlayRenderer renderer = LiveHider.getRenderer();

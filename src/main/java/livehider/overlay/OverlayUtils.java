@@ -14,6 +14,6 @@ public final class OverlayUtils {
 
     public static void showToast(Component title, Component description) {
         Minecraft.getInstance()
-            .submit(() -> Minecraft.getInstance().getToastManager().addToast(new SystemToast(SystemToastId.LOW_DISK_SPACE, title, description)));
+            .submit(() -> Minecraft.getInstance().gui.toastManager().addToast(new SystemToast(SystemToastId.LOW_DISK_SPACE, title, description)));
     }
 }

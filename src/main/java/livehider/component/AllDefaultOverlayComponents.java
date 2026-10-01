@@ -7,6 +7,7 @@ import livehider.component.type.HUDOverlayComponent;
  * The default obs-overlay HUD components. Ported from obs-overlay (MIT, author zziger).
  */
 public final class AllDefaultOverlayComponents {
+    public static IOverlayComponent hitboxes = new HUDOverlayComponent(LiveHider.id("hitboxes"), false, false);
     public static IOverlayComponent debugMenu = new HUDOverlayComponent(LiveHider.id("debug_menu"), true, false);
     public static IOverlayComponent chat = new HUDOverlayComponent(LiveHider.id("chat"), false, true);
     public static IOverlayComponent chatBar = new HUDOverlayComponent(LiveHider.id("chat_bar"), false, false);
@@ -22,6 +23,6 @@ public final class AllDefaultOverlayComponents {
     }
 
     public static void init() {
-        OverlayComponentRegistry.registerComponents(debugMenu, chat, chatBar, playerList, subtitles, scoreboards, actionbar, titleSubtitle, effects, mainHud);
+        OverlayComponentRegistry.registerComponents(debugMenu, chat, chatBar, playerList, subtitles, scoreboards, actionbar, titleSubtitle, effects, mainHud, hitboxes);
     }
 }

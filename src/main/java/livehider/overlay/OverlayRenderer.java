@@ -2,49 +2,69 @@ package livehider.overlay;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
-import com.mojang.blaze3d.systems.CommandEncoder;
-import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.textures.GpuTexture;
+import com.mojang.renderpearl.api.GpuFormat;
+import com.mojang.renderpearl.api.commands.CommandEncoder;
+import com.mojang.renderpearl.api.commands.RenderPass;
+import com.mojang.renderpearl.api.textures.FilterMode;
+import com.mojang.renderpearl.frontend.FrontendCommandEncoder;
 import java.io.Closeable;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
-import java.util.OptionalInt;
-import livehider.component.IOverlayComponent;
+import java.util.Optional;
+import java.util.OptionalDouble;
+import net.minecraft.client.renderer.RenderBuffers;
+import net.minecraft.client.renderer.SubmitNodeStorage;
+import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
+import net.minecraft.client.renderer.gizmos.DrawableGizmoPrimitives;
 import livehider.LiveHider;
 import livehider.LiveHiderConfig;
+import livehider.component.IOverlayComponent;
 import livehider.mixin.accessor.GuiRendererAccessor;
+import livehider.mixin.accessor.SurfaceAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.render.GuiRenderer;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.state.gui.GuiRenderState;
-import org.jetbrains.annotations.NotNull;
+import org.joml.Vector4f;
 
-/**
- * The 26.1 overlay renderer: extracts redirected HUD components into an off-screen
- * target, then composites it onto the screen at swap time so the player sees it but OBS
- * (which grabs the main target) does not. Ported from obs-overlay (MIT, author zziger).
- */
+/** Off-screen HUD plus a private presentation copy; never modifies the captured main target. */
 public class OverlayRenderer implements Closeable {
-    private static final boolean NEOFORGE = detectNeoForge();
     private final OverlayHook.Handler swapHandler = this::renderFrame;
-    private boolean closed;
-    private boolean framebufferOverridden = false;
-    private OverlayFramebuffer overlayFramebuffer;
     private final GuiRenderState overlayGuiState = new GuiRenderState();
+    private RenderTarget hudTarget;
+    private RenderTarget presentationTarget;
+    private RenderTarget hitboxTarget;
+    private RenderBuffers hitboxBuffers;
+    private FeatureRenderDispatcher hitboxDispatcher;
+    private final SubmitNodeStorage hitboxSubmits = new SubmitNodeStorage();
+    private DrawableGizmoPrimitives hitboxes = new DrawableGizmoPrimitives();
     private GuiGraphicsExtractor overlayGuiGraphics;
     private GuiRenderer overlayGuiRenderer;
+    private boolean framebufferOverridden;
+    private boolean dirty;
+    private boolean closed;
 
     public OverlayRenderer() {
+        // The existing native capture hook is OpenGL-only, not a Vulkan capture hook.
+        if (!(Minecraft.getInstance().gameRenderer.mainRenderTarget().getColorTexture()
+                instanceof com.mojang.renderpearl.backend.opengl.GlTexture)) {
+            throw new OverlayHookException("UNSUPPORTED_RENDERER");
+        }
         OverlayHook.init();
         try {
-            this.initializeFramebuffers();
-            this.resetGuiExtraction();
-            OverlayHook.subscribe(this.swapHandler);
+            Minecraft mc = Minecraft.getInstance();
+            int width = mc.getWindow().getWidth(), height = mc.getWindow().getHeight();
+            hudTarget = new TextureTarget("StreamShield HUD", width, height, GpuFormat.RGBA8_UNORM,
+                mc.gameRenderer.mainRenderTarget().getDepthTexture().getFormat());
+            presentationTarget = new TextureTarget("StreamShield presentation", width, height, GpuFormat.RGBA8_UNORM, null);
+            hitboxTarget = new TextureTarget("StreamShield hitboxes", width, height, GpuFormat.RGBA8_UNORM,
+                mc.gameRenderer.mainRenderTarget().getDepthTexture().getFormat());
+            hitboxBuffers = new RenderBuffers(1);
+            hitboxDispatcher = new FeatureRenderDispatcher(hitboxBuffers, mc.getModelManager(), mc.getAtlasManager(), mc.font,
+                mc.gameRenderer.gameRenderState());
+            beginFrame();
+            OverlayHook.subscribe(swapHandler);
         } catch (RuntimeException | LinkageError error) {
             close();
             throw error;
@@ -53,193 +73,112 @@ public class OverlayRenderer implements Closeable {
 
     @Override
     public void close() {
-        if (this.closed) return;
-        this.closed = true;
-        OverlayHook.unsubscribe(this.swapHandler);
-        this.framebufferOverridden = false;
+        if (closed) return;
+        closed = true;
+        OverlayHook.unsubscribe(swapHandler);
+        framebufferOverridden = false;
         try {
-            if (this.overlayGuiRenderer != null) {
-                // Fabric borrows vanilla's PiP renderers. Never close those shared instances.
-                ((GuiRendererAccessor) this.overlayGuiRenderer).setPictureInPictureRenderers(Map.of());
-                this.overlayGuiRenderer.close();
-                this.overlayGuiRenderer = null;
+            if (overlayGuiRenderer != null) {
+                ((GuiRendererAccessor) overlayGuiRenderer).setPictureInPictureRenderers(Map.of());
+                overlayGuiRenderer.close();
+                overlayGuiRenderer = null;
             }
         } finally {
-            if (this.overlayFramebuffer != null) {
-                this.overlayFramebuffer.object.destroyBuffers();
-                this.overlayFramebuffer = null;
-            }
+            if (hudTarget != null) hudTarget.destroyBuffers();
+            if (presentationTarget != null) presentationTarget.destroyBuffers();
+            if (hitboxTarget != null) hitboxTarget.destroyBuffers();
+            if (hitboxDispatcher != null) hitboxDispatcher.close();
+            if (hitboxBuffers != null) hitboxBuffers.close();
         }
     }
 
-    private void initializeFramebuffers() {
-        Minecraft client = Minecraft.getInstance();
-        RenderTarget simpleFramebuffer = new TextureTarget("Overlay Target", client.getWindow().getWidth(), client.getWindow().getHeight(), true);
-        this.overlayFramebuffer = new OverlayFramebuffer(simpleFramebuffer);
-        clearFramebuffer(simpleFramebuffer);
-    }
-
-    private void markOverlayDirty() {
-        if (this.overlayFramebuffer != null) {
-            this.overlayFramebuffer.dirty = true;
+    public GuiRenderer getOverlayGuiRenderer(GuiRenderer original) {
+        if (overlayGuiRenderer == null) {
+            GuiRendererAccessor access = (GuiRendererAccessor) original;
+            overlayGuiRenderer = new GuiRenderer(overlayGuiState, access.getFeatureRenderDispatcher(), List.of());
         }
-    }
-
-    private static void clearFramebuffer(RenderTarget target) {
-        GpuTexture colorTexture = target.getColorTexture();
-        if (colorTexture != null) {
-            CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();
-            if (target.useDepth && target.getDepthTexture() != null) {
-                encoder.clearColorAndDepthTextures(colorTexture, 0, target.getDepthTexture(), 1.0);
-            } else {
-                encoder.clearColorTexture(colorTexture, 0);
-            }
-        }
-    }
-
-    @NotNull
-    public GuiRenderer getOverlayGuiRenderer(GuiRenderer copyFrom) {
-        if (this.overlayGuiRenderer != null) {
-            return this.overlayGuiRenderer;
-        }
-        try {
-            // NeoForge 26.1 replaces vanilla's renderer list parameter with its own registration
-            // records. Construct reflectively so the shared overlay code remains binary-compatible
-            // with Fabric; PiP renderers are intentionally omitted on NeoForge because they are
-            // unrelated to the HUD components StreamShield redirects.
-            List<?> pipRenderers = NEOFORGE
-                ? List.of()
-                : ((Map<?, ?>) getField(copyFrom, "pictureInPictureRenderers")).values().stream().toList();
-            Constructor<GuiRenderer> constructor = GuiRenderer.class.getConstructor(
-                GuiRenderState.class,
-                net.minecraft.client.renderer.MultiBufferSource.BufferSource.class,
-                net.minecraft.client.renderer.SubmitNodeCollector.class,
-                net.minecraft.client.renderer.feature.FeatureRenderDispatcher.class,
-                List.class
-            );
-            this.overlayGuiRenderer = constructor.newInstance(
-                this.overlayGuiState,
-                getField(copyFrom, "bufferSource"),
-                getField(copyFrom, "submitNodeCollector"),
-                getField(copyFrom, "featureRenderDispatcher"),
-                pipRenderers
-            );
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Unable to create StreamShield overlay GUI renderer", e);
-        }
-        return this.overlayGuiRenderer;
-    }
-
-    private static boolean detectNeoForge() {
-        try {
-            Class.forName("net.neoforged.neoforge.common.NeoForge");
-            return true;
-        } catch (ClassNotFoundException ignored) {
-            return false;
-        }
-    }
-
-    private static Object getField(GuiRenderer renderer, String name) throws ReflectiveOperationException {
-        Field field = GuiRenderer.class.getDeclaredField(name);
-        field.setAccessible(true);
-        return field.get(renderer);
+        return overlayGuiRenderer;
     }
 
     public RenderTarget getGuiRenderTarget() {
-        return this.framebufferOverridden && this.overlayFramebuffer != null
-            ? this.overlayFramebuffer.object
-            : Minecraft.getInstance().getMainRenderTarget();
+        return framebufferOverridden ? hudTarget : Minecraft.getInstance().gameRenderer.mainRenderTarget();
     }
 
-    public GuiGraphicsExtractor getGuiGraphics() {
-        return this.overlayGuiGraphics;
-    }
+    public GuiGraphicsExtractor getGuiGraphics() { return overlayGuiGraphics; }
 
-    @NotNull
     public GuiGraphicsExtractor getGuiGraphics(IOverlayComponent component, GuiGraphicsExtractor original) {
-        if (!component.isOverlayEnabled()) {
-            return original;
-        }
-        if (component.isHidden()) {
-            return DummyGuiGraphics.INSTANCE;
-        }
-        GuiGraphicsExtractor guiGraphics = this.getGuiGraphics();
-        return guiGraphics != null ? guiGraphics
+        if (!component.isOverlayEnabled()) return original;
+        if (component.isHidden()) return DummyGuiGraphics.INSTANCE;
+        return overlayGuiGraphics != null ? overlayGuiGraphics
             : LiveHiderConfig.get().hideHudWhenOverlayUnavailable ? DummyGuiGraphics.INSTANCE : original;
     }
 
-    public void beginDraw() {
-        if (this.overlayFramebuffer != null) {
-            this.framebufferOverridden = true;
-            this.markOverlayDirty();
-        }
-    }
+    public void beginDraw() { framebufferOverridden = true; dirty = true; }
+    public void endDraw() { framebufferOverridden = false; }
 
-    public void endDraw() {
-        if (this.overlayFramebuffer != null) {
-            this.framebufferOverridden = false;
-        }
-    }
-
-    public void onResolutionChanged(Minecraft client) {
-        if (this.overlayFramebuffer != null) {
-            this.overlayFramebuffer.object.resize(client.getWindow().getWidth(), client.getWindow().getHeight());
-        }
-    }
-
-    private static void renderQuad(RenderTarget framebuffer) {
-        if (framebuffer.getColorTexture() != null) {
-            Minecraft minecraft = Minecraft.getInstance();
-            int width = minecraft.getWindow().getWidth();
-            int height = minecraft.getWindow().getHeight();
-            RenderPass renderPass = RenderSystem.getDevice()
-                .createCommandEncoder()
-                .createRenderPass(() -> "Overlay Screen", new OverlayScreenTextureView(width, height), OptionalInt.empty());
-            try {
-                // On NeoForge use a vanilla full-screen blit pipeline.  It has
-                // the same screenquad/InSampler contract but is compiled by the
-                // game's own resource reload, rather than relying on a mod shader.
-                renderPass.setPipeline(NEOFORGE
-                    ? RenderPipelines.ENTITY_OUTLINE_BLIT
-                    : OverlayPipelines.OVERLAY_COMPOSITE);
-                RenderSystem.bindDefaultUniforms(renderPass);
-                renderPass.bindTexture("InSampler", framebuffer.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-                renderPass.draw(0, 3);
-            } catch (Throwable t) {
-                if (renderPass != null) {
-                    try {
-                        renderPass.close();
-                    } catch (Throwable close) {
-                        t.addSuppressed(close);
-                    }
-                }
-                throw t;
-            }
-            if (renderPass != null) {
-                renderPass.close();
-            }
-        }
+    public void onResolutionChanged(Minecraft mc) {
+        hudTarget.resize(mc.getWindow().getWidth(), mc.getWindow().getHeight());
+        presentationTarget.resize(mc.getWindow().getWidth(), mc.getWindow().getHeight());
+        hitboxTarget.resize(mc.getWindow().getWidth(), mc.getWindow().getHeight());
     }
 
     public void beginFrame() {
-        if (this.overlayFramebuffer != null) {
-            clearFramebuffer(this.overlayFramebuffer.object);
-            this.resetGuiExtraction();
-        }
-    }
-
-    private void resetGuiExtraction() {
-        Minecraft minecraft = Minecraft.getInstance();
-        int mouseX = (int) minecraft.mouseHandler.getScaledXPos(minecraft.getWindow());
-        int mouseY = (int) minecraft.mouseHandler.getScaledYPos(minecraft.getWindow());
-        this.overlayGuiState.reset();
-        this.overlayGuiGraphics = new GuiGraphicsExtractor(minecraft, this.overlayGuiState, mouseX, mouseY);
+        dirty = false;
+        framebufferOverridden = false;
+        hitboxes = new DrawableGizmoPrimitives();
+        RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(
+            hitboxTarget.getColorTexture(), new Vector4f(), hitboxTarget.getDepthTexture(), RenderSystem.DEFAULT_DEPTH_CLEAR_VALUE);
+        RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(
+            hudTarget.getColorTexture(), new Vector4f(), hudTarget.getDepthTexture(), RenderSystem.DEFAULT_DEPTH_CLEAR_VALUE);
+        Minecraft mc = Minecraft.getInstance();
+        overlayGuiState.reset();
+        overlayGuiGraphics = new GuiGraphicsExtractor(mc, overlayGuiState,
+            (int) mc.mouseHandler.getScaledXPos(mc.getWindow()), (int) mc.mouseHandler.getScaledYPos(mc.getWindow()));
     }
 
     public void renderFrame() {
-        if (!this.closed && LiveHider.getIsInitialized() && this.overlayFramebuffer != null && this.overlayFramebuffer.dirty) {
-            this.overlayFramebuffer.dirty = false;
-            renderQuad(this.overlayFramebuffer.object);
+        if (closed || !LiveHider.getIsInitialized() || !dirty) return;
+        dirty = false;
+        Minecraft mc = Minecraft.getInstance();
+        RenderTarget main = mc.gameRenderer.mainRenderTarget();
+        CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();
+        encoder.copyTextureToTexture(main.getColorTexture(), presentationTarget.getColorTexture(),
+            0, 0, 0, 0, 0, mc.getWindow().getWidth(), mc.getWindow().getHeight());
+        try (RenderPass pass = encoder.createRenderPass(() -> "StreamShield composite", presentationTarget.getColorTextureView(), Optional.empty())) {
+            pass.setPipeline(RenderSystem.getCompiledPipeline(OverlayPipelines.OVERLAY_COMPOSITE));
+            RenderSystem.bindDefaultUniforms(pass);
+            pass.setUniform("InSampler", hitboxTarget.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+            pass.draw(0, 3, 0, 1);
+            pass.setUniform("InSampler", hudTarget.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+            pass.draw(0, 3, 0, 1);
+        }
+        // Native swap callback: frontend has already blitted once. Do not recursively present.
+        ((SurfaceAccessor) mc.windowSurface()).liveHider$backend().blitFromTexture(
+            ((FrontendCommandEncoder) encoder).backend(), presentationTarget.getColorTextureView());
+    }
+
+    public DrawableGizmoPrimitives hitboxPrimitives() { return hitboxes; }
+
+    /** Dedicated submits, dispatcher and vertex buffer: held items cannot enter this pass. */
+    public void renderHitboxes() {
+        if (hitboxes.isEmpty()) return;
+        Minecraft mc = Minecraft.getInstance();
+        CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();
+        encoder.copyTextureToTexture(mc.gameRenderer.mainRenderTarget().getDepthTexture(), hitboxTarget.getDepthTexture(),
+            0, 0, 0, 0, 0, mc.getWindow().getWidth(), mc.getWindow().getHeight());
+        hitboxSubmits.setUseImprovedTransparency(false);
+        hitboxes.submit(hitboxSubmits, mc.gameRenderer.gameRenderState().levelRenderState.cameraRenderState, false);
+        try (FeatureRenderDispatcher.PreparedFrame frame = hitboxDispatcher.prepareFrame(hitboxSubmits)) {
+            RenderSystem.resizeAllAutoStorageIndexBuffers();
+            try (RenderPass pass = encoder.createRenderPass(() -> "StreamShield isolated hitboxes", hitboxTarget.getColorTextureView(),
+                    Optional.empty(), hitboxTarget.getDepthTextureView(), OptionalDouble.empty())) {
+                RenderSystem.bindDefaultUniforms(pass);
+                FeatureRenderDispatcher.renderAllFeatures(pass, frame);
+            }
+            dirty = true;
+        } finally {
+            hitboxBuffers.endFrame();
+            hitboxes = new DrawableGizmoPrimitives();
         }
     }
 }

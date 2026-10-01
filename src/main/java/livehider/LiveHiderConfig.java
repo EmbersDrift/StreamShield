@@ -41,6 +41,8 @@ public final class LiveHiderConfig {
 
     // Stream-safe client display: renamed items show their localized vanilla name instead of the custom name.
     public boolean normalizeItemNames = true;
+    public boolean filterSignText = true;
+    public boolean hideSignText = false;
 
     // ---- M2b-1: name anonymization ----
     public boolean anonymizeNames = true;

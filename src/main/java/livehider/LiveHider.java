@@ -74,7 +74,7 @@ public final class LiveHider {
         if (!getIsInitialized()) disposeRenderer();
         Minecraft minecraft = Minecraft.getInstance();
         if (LIFECYCLE.beginAttempt(OverlayHook.isPlatformSupported(),
-                minecraft.getOverlay() instanceof LoadingOverlay)) {
+                minecraft.gui.overlay() instanceof LoadingOverlay)) {
             initRender();
         }
         if (getIsInitialized()) {

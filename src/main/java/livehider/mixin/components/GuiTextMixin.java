@@ -1,7 +1,7 @@
 package livehider.mixin.components;
 
 import livehider.text.SafeText;
-import net.minecraft.client.gui.Gui;
+import net.minecraft.client.gui.Hud;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
  * Redacts title / subtitle / actionbar content at the point it is set, so sensitive text
  * (e.g. server IP/name) is replaced by the placeholder before it is stored/rendered.
  */
-@Mixin(Gui.class)
+@Mixin(Hud.class)
 public class GuiTextMixin {
     @ModifyVariable(method = "setTitle(Lnet/minecraft/network/chat/Component;)V", at = @At("HEAD"), argsOnly = true, index = 1)
     private Component redactTitle(Component component) {

@@ -1,4 +1,9 @@
 {
+  "key.live_hider.open_config": "Open StreamShield configuration",
+  "live_hider.sign_filter": "Filter sign text",
+  "live_hider.sign_filter.tooltip": "Apply redaction rules to both sides of all vanilla world signs. Requires text redaction; does not change editor input.",
+  "live_hider.sign_blank": "Blank all sign text",
+  "live_hider.sign_blank.tooltip": "Hide all text on both sides of world signs while keeping the sign model. Overrides filtering; server data is unchanged.",
   "live_hider.title": "StreamShield",
   "live_hider.overlay.hide_on_failure": "Hide selected HUD locally if overlay is unavailable",
   "live_hider.overlay.hide_on_failure.tooltip": "When the overlay is not ready or fails, hide the selected HUD components in your own game too. Off by default. This can hide health and hotbar information while you play.",

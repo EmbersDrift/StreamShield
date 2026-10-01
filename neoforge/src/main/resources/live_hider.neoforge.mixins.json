@@ -1,9 +1,12 @@
 {
   "required": true,
   "package": "livehider.mixin",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_25",
   "minVersion": "0.8",
   "client": [
+    "accessor.SurfaceAccessor",
+    "GuiLifecycleMixin",
+    "components.SignTextMixin",
     "accessor.GuiGraphicsAccessor", "accessor.GuiRendererAccessor", "accessor.SkinManagerInvoker", "GuiRendererMixin", "GameRendererMixin", "MinecraftMixin", "ScreenMixin", "ClientPacketListenerMixin",
     "components.DebugHudMixin", "neoforge.GuiMixin", "components.ChatHudMixin", "components.PlayerListHudMixin", "components.SubtitlesHudMixin", "components.ChatScreenMixin", "components.ChatNameMixin", "components.NameTagMixin", "components.TabNameMixin", "components.ChatInputMixin", "components.GuiTextMixin", "components.ScoreboardTitleMixin", "components.ScoreboardLineMixin", "components.EditBoxInputMixin", "components.PlayerSkinMixin"
   ],

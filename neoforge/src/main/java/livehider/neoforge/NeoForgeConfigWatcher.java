@@ -32,7 +32,7 @@ final class NeoForgeConfigWatcher {
             return;
         }
         tickCount = 0;
-        if (LiveHiderConfigScreen.isActiveConfigScreen(Minecraft.getInstance().screen)) {
+        if (LiveHiderConfigScreen.isActiveConfigScreen(Minecraft.getInstance().gui.screen())) {
             return;
         }
         Path path = LiveHiderConfig.getPath();

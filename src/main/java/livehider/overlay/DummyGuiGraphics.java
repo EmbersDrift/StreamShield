@@ -1,6 +1,6 @@
 package livehider.overlay;
 
-import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 import java.util.List;
 import livehider.mixin.accessor.GuiGraphicsAccessor;
 import net.minecraft.client.Minecraft;

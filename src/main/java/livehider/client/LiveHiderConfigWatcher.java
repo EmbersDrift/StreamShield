@@ -34,7 +34,7 @@ public final class LiveHiderConfigWatcher {
                 return;
             }
             tickCount = 0;
-            if (LiveHiderConfigScreen.isActiveConfigScreen(client.screen)) {
+            if (LiveHiderConfigScreen.isActiveConfigScreen(client.gui.screen())) {
                 return;
             }
             long now = mtime(path);

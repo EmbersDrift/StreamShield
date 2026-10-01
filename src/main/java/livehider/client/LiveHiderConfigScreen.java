@@ -34,7 +34,7 @@ public final class LiveHiderConfigScreen {
     private static void reopen() {
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
         if (mc != null) {
-            mc.setScreen(create(parentScreen));
+            mc.gui.setScreen(create(parentScreen));
         }
     }
 
@@ -69,7 +69,7 @@ public final class LiveHiderConfigScreen {
             activeConfigScreen.saveAll(false);
         }
         net.minecraft.client.Minecraft.getInstance()
-            .setScreen(LiveHiderPreflightScreen.create(create(parentScreen)));
+            .gui.setScreen(LiveHiderPreflightScreen.create(create(parentScreen)));
     }
 
     /** Extract the last path segment (after the final '.') from a component id, e.g. "live_hider.live_hider.debug_menu" -> "debug_menu". */
@@ -95,6 +95,12 @@ public final class LiveHiderConfigScreen {
 
         // ---- General / redaction + skin mode ----
         ConfigCategory general = builder.getOrCreateCategory(t("live_hider.category.general"));
+        general.addEntry(e.startBooleanToggle(t("live_hider.sign_filter"), config.filterSignText)
+            .setDefaultValue(true).setTooltip(t("live_hider.sign_filter.tooltip"))
+            .setSaveConsumer(v -> config.filterSignText = v).build());
+        general.addEntry(e.startBooleanToggle(t("live_hider.sign_blank"), config.hideSignText)
+            .setDefaultValue(false).setTooltip(t("live_hider.sign_blank.tooltip"))
+            .setSaveConsumer(v -> config.hideSignText = v).build());
         general.addEntry(e.startBooleanToggle(t("live_hider.redact_enabled"), config.redactEnabled)
             .setDefaultValue(true)
             .setTooltip(t("live_hider.redact_enabled.tooltip"))

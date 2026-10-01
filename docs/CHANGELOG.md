@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.2 (Unreleased)
+
+### Added
+
+- World sign text can use the existing redaction rules or be hidden completely while retaining the sign model. Covers both faces of all vanilla standing, wall, hanging and wall-hanging signs, including dyed and glowing text. Editing and server data remain unchanged.
+- Added a configurable key binding to open StreamShield settings (F8 by default, while no screen is open).
+
+
 ## v1.1.1
 
 ### Added

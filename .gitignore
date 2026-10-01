@@ -26,3 +26,7 @@ run/
 # --- OS ---
 .DS_Store
 Thumbs.db
+
+# --- Game/launcher logs (never part of the build) ---
+logs/
+.gitee-fix/

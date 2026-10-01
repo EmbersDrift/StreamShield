@@ -28,7 +28,7 @@ public class EditBoxInputMixin {
     private String preserveFormattingCodes(String filtered, String text) {
         if (text != null
             && text.indexOf('\u00A7') >= 0
-            && LiveHiderConfigScreen.isActiveConfigScreen(Minecraft.getInstance().screen)) {
+            && LiveHiderConfigScreen.isActiveConfigScreen(Minecraft.getInstance().gui.screen())) {
             return text;
         }
         return filtered;

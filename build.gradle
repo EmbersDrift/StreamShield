@@ -30,7 +30,7 @@ dependencies {
     include "io.github.llamalad7:mixinextras-fabric:0.5.4"
 
     // Optional integration: Mod Menu config entrypoint (compile-time only; runtime optional).
-    implementation "com.terraformersmc:modmenu:18.0.0"
+    implementation "com.terraformersmc:modmenu:21.0.0"
 
     // Overlay hook layer: JNA (native hook) + commons-io.
     implementation "net.java.dev.jna:jna:5.19.1"

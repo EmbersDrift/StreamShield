@@ -22,7 +22,7 @@ public class ChatInputMixin {
         Minecraft mc = Minecraft.getInstance();
         // EditBox is also used by config screens and many vanilla menus. Only the actual chat
         // input is stream-facing, and this feature has its own opt-out setting.
-        if (config == null || !config.sanitizeChatInput || mc == null || !(mc.screen instanceof ChatScreen)) {
+        if (config == null || !config.sanitizeChatInput || mc == null || !(mc.gui.screen() instanceof ChatScreen)) {
             return string;
         }
         // While the reveal key is held, show the real text so the streamer can verify what they typed.

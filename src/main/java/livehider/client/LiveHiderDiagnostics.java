@@ -111,6 +111,8 @@ public final class LiveHiderDiagnostics {
             settings.addProperty("anonymizeNames", config.anonymizeNames);
             settings.addProperty("sanitizeChatInput", config.sanitizeChatInput);
             settings.addProperty("redactEnabled", config.redactEnabled);
+            settings.addProperty("filterSignText", config.filterSignText);
+            settings.addProperty("hideSignText", config.hideSignText);
             settings.addProperty("autoGrabServer", config.autoGrabServer);
             settings.addProperty("redactPresetEnabled", config.redactPresetEnabled);
             settings.addProperty("redactStrictPresetEnabled", config.redactStrictPresetEnabled);
