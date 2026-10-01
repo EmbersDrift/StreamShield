@@ -1,9 +1,6 @@
 package livehider.mixin.accessor;
 
-import java.util.Map;
 import net.minecraft.client.gui.render.GuiRenderer;
-import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
-import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.MultiBufferSource.BufferSource;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
@@ -25,6 +22,4 @@ public interface GuiRendererAccessor {
     @Accessor("featureRenderDispatcher")
     FeatureRenderDispatcher getFeatureRenderDispatcher();
 
-    @Accessor("pictureInPictureRenderers")
-    Map<Class<? extends PictureInPictureRenderState>, PictureInPictureRenderer<?>> getPictureInPictureRenderers();
 }

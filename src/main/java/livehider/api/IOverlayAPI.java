@@ -1,6 +1,7 @@
 package livehider.api;
 
 import livehider.component.IOverlayComponent;
+import livehider.LiveHiderConfig;
 import livehider.overlay.DummyGuiGraphics;
 import net.minecraft.client.gui.GuiGraphics;
 
@@ -10,7 +11,9 @@ import net.minecraft.client.gui.GuiGraphics;
  */
 public interface IOverlayAPI {
     default GuiGraphics getGuiGraphics(IOverlayComponent component, GuiGraphics original) {
-        return original;
+        LiveHiderConfig config = LiveHiderConfig.get();
+        return config != null && config.hideHudWhenOverlayUnavailable && component.isOverlayEnabled()
+            ? DummyGuiGraphics.INSTANCE : original;
     }
 
     default GuiGraphics getOverlayGuiGraphics() {

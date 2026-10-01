@@ -27,37 +27,22 @@ public final class SafeText {
     }
 
     public static Component rewriteScoreboard(Component original) {
+        ScoreboardDiagnostics.capture("title", original);
         if (original == null) {
             return original;
         }
-        return rewriteNode(original, Redactor::applyScoreboardToText);
+        return Redactor.applyScoreboardToComponent(original);
     }
 
     /**
-     * Structure-preserving rewrite for an assembled sidebar-row {@link Component}. Unlike
-     * {@link #rewriteScoreboard}, this treats the <em>whole row</em> as a single unit to map on its
-     * raw string (colour codes + PUA icon codepoints preserved) and anonymize an exact player-name
-     * line, then rebuilds only the text leaves. Siblings that carry server resource-pack icon styling
-     * are left untouched, so PUA glyphs keep rendering as their custom images instead of boxes.
-     */
-    /**
-     * Structure-preserving rewrite for an assembled sidebar-row {@link Component}. The whole row's
-     * plain string is run through {@link Redactor#rewriteScoreboardRow} (chain rules + name anonymization)
-     * as one unit, then, if it changed and contains {@code §}/{@code &} colour codes, parsed into styled
-     * runs. Server resource-pack icon siblings are preserved by only substituting the row text itself;
-     * if the composed string did not change, the original component is returned untouched.
+     * Matches the visible row across text leaves while retaining untouched styles and icon fonts.
      */
     public static Component rewriteScoreboardRecord(Component original) {
+        ScoreboardDiagnostics.capture("row", original);
         if (original == null) {
             return original;
         }
-        // Per-leaf, structure-preserving rewrite (the same transform the title uses). Each plain-text
-        // leaf is rewritten individually while its sibling components keep their original style/font,
-        // so server resource-pack PUA icon siblings still render as their custom images instead of
-        // degrading to boxes. The earlier whole-row flatten (flatString -> parseLegacyFormatting) is
-        // intentionally dropped: rebuilding the entire row as Component.literal runs stripped the icon
-        // siblings' styling and turned their PUA glyphs into boxes.
-        return rewriteNode(original, Redactor::applyScoreboardToText);
+        return Redactor.applyScoreboardToComponent(original);
     }
 
     /** Name anonymization then content redaction (general surfaces). */
@@ -72,11 +57,14 @@ public final class SafeText {
      * any keyboard), with {@code &&} meaning a literal ampersand. Non-format text is kept as plain runs.
      */
     public static MutableComponent parseLegacyFormatting(String input) {
+        return parseLegacyFormatting(input, Style.EMPTY);
+    }
+
+    static MutableComponent parseLegacyFormatting(String input, Style initialStyle) {
         MutableComponent root = Component.empty();
-        MutableComponent current = null;
         StringBuilder plain = new StringBuilder();
         // Track the running style so codes accumulate until reset.
-        Style style = Style.EMPTY;
+        Style style = initialStyle;
         int i = 0;
         while (i < input.length()) {
             char c = input.charAt(i);
@@ -88,14 +76,9 @@ public final class SafeText {
                         plain.setLength(0);
                         MutableComponent run = Component.literal(text);
                         run.withStyle(style);
-                        if (current == null) {
-                            root = run;
-                            current = run;
-                        } else {
-                            current.append(run);
-                        }
+                        root.append(run);
                     }
-                    style = style.applyLegacyFormat(fmt);
+                    style = applyLegacyFormat(style, fmt);
                     i += 2;
                     continue;
                 }
@@ -114,14 +97,9 @@ public final class SafeText {
                         plain.setLength(0);
                         MutableComponent run = Component.literal(text);
                         run.withStyle(style);
-                        if (current == null) {
-                            root = run;
-                            current = run;
-                        } else {
-                            current.append(run);
-                        }
+                        root.append(run);
                     }
-                    style = style.applyLegacyFormat(fmt);
+                    style = applyLegacyFormat(style, fmt);
                     i += 2;
                     continue;
                 }
@@ -132,16 +110,18 @@ public final class SafeText {
         if (plain.length() > 0) {
             MutableComponent run = Component.literal(plain.toString());
             run.withStyle(style);
-            if (current == null) {
-                root = run;
-            } else {
-                current.append(run);
-            }
+            root.append(run);
         }
         return root;
     }
 
-    private static Component rewriteNode(Component node, UnaryOperator<String> transform) {
+    private static Style applyLegacyFormat(Style style, ChatFormatting format) {
+        // Explicitly clear visual flags on reset, including when the component is later appended
+        // to a styled parent. Style.EMPTY would inherit that parent's bold/italic/color again.
+        return style.applyLegacyFormat(format == ChatFormatting.RESET ? ChatFormatting.WHITE : format);
+    }
+
+    static Component rewriteNode(Component node, UnaryOperator<String> transform) {
         if (node == null) {
             return null;
         }
@@ -153,9 +133,10 @@ public final class SafeText {
                 // Preserve legacy § formatting codes in the replacement (so §X renders as colour/format),
                 // and re-append the original siblings so value/number parts are not dropped.
                 if (containsLegacyFormatting(replaced)) {
-                    MutableComponent nodeRoot = parseLegacyFormatting(replaced);
+                    MutableComponent nodeRoot = parseLegacyFormatting(replaced, node.getStyle());
                     for (Component sibling : node.getSiblings()) {
-                        nodeRoot.append(rewriteNode(sibling, transform));
+                        Component inheritedSibling = sibling.copy().withStyle(sibling.getStyle().applyTo(node.getStyle()));
+                        nodeRoot.append(rewriteNode(inheritedSibling, transform));
                     }
                     return nodeRoot;
                 }
@@ -185,7 +166,8 @@ public final class SafeText {
                             if (newArgs == null) {
                                 newArgs = args.clone();
                             }
-                            newArgs[i] = r;
+                            newArgs[i] = containsLegacyFormatting(r)
+                                ? parseLegacyFormatting(r, node.getStyle()) : r;
                         }
                     }
                 }
@@ -193,9 +175,13 @@ public final class SafeText {
                     String key = tc.getKey();
                     String fallback = tc.getFallback();
                     MutableComponent rewritten = fallback != null
-                        ? Component.translatable(key, fallback, newArgs)
+                        ? Component.translatableWithFallback(key, fallback, newArgs)
                         : Component.translatable(key, newArgs);
-                    return rewritten.withStyle(node.getStyle());
+                    rewritten.withStyle(node.getStyle());
+                    for (Component sibling : node.getSiblings()) {
+                        rewritten.append(rewriteNode(sibling, transform));
+                    }
+                    return rewritten;
                 }
             }
         }
@@ -214,8 +200,7 @@ public final class SafeText {
             char marker = text.charAt(i);
             if (marker == '\u00A7' || marker == '&') {
                 if (marker == '&' && text.charAt(i + 1) == '&') {
-                    i++;
-                    continue;
+                    return true;
                 }
                 if (ChatFormatting.getByCode(text.charAt(i + 1)) != null) {
                     return true;

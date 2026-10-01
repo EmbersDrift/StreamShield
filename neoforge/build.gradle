@@ -5,6 +5,9 @@ plugins {
 version = project.mod_version
 group = project.maven_group
 
+ext.releaseLoader = 'neoforge'
+apply from: '../gradle/release-support.gradle'
+
 repositories {
     maven { url = "https://maven.architectury.dev/" }
     maven { url = "https://maven.shedaniel.me/" }
@@ -22,6 +25,10 @@ sourceSets {
         }
         resources.srcDir '../src/main/resources'
     }
+    test.java.srcDir '../src/test/java'
+    // ModDev attaches Minecraft libraries to main; shared unit tests need the same classes.
+    test.compileClasspath += main.compileClasspath
+    test.runtimeClasspath += main.runtimeClasspath
 }
 
 neoForge {
@@ -62,8 +69,14 @@ tasks.withType(JavaCompile).configureEach {
 tasks.named('processResources', ProcessResources).configure {
     exclude 'fabric.mod.json'
     inputs.property 'version', project.version
+    inputs.property 'minecraft_version', project.minecraft_version
+    inputs.property 'neoforge_version', project.neoforge_version
+    inputs.property 'architectury_version', project.architectury_version
+    inputs.property 'cloth_config_version', project.cloth_config_version
     filesMatching('META-INF/neoforge.mods.toml') {
-        expand version: project.version, minecraft_version: project.minecraft_version, neoforge_version: project.neoforge_version
+        expand version: project.version, minecraft_version: project.minecraft_version,
+                neoforge_version: project.neoforge_version, architectury_version: project.architectury_version,
+                cloth_config_version: project.cloth_config_version
     }
 }
 

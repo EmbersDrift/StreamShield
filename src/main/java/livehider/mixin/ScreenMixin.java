@@ -30,6 +30,8 @@ public class ScreenMixin {
     /** Tooltip construction is client-only, so normalization cannot affect container/anvil logic. */
     @ModifyReturnValue(method = "getTooltipFromItem", at = @At("RETURN"))
     private static List<Component> normalizeItemTooltip(List<Component> original, Minecraft minecraft, ItemStack stack) {
-        return ItemNameNormalizer.normalizeTooltip(original, stack);
+        var normalized = ItemNameNormalizer.normalizeTooltip(original, stack);
+        return LiveHiderConfig.get().redactItemTooltips
+            ? normalized.stream().map(livehider.text.SafeText::rewrite).toList() : normalized;
     }
 }

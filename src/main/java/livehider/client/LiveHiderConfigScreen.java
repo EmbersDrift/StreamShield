@@ -63,6 +63,20 @@ public final class LiveHiderConfigScreen {
         return activeConfigScreen == screen;
     }
 
+    private static void openPreflight() {
+        // Apply the visible values first so the report describes the settings the user just chose.
+        if (activeConfigScreen != null) {
+            activeConfigScreen.saveAll(false);
+        }
+        net.minecraft.client.Minecraft.getInstance()
+            .setScreen(LiveHiderPreflightScreen.create(create(parentScreen)));
+    }
+
+    private static void openPrivacyTools() {
+        if (activeConfigScreen != null) activeConfigScreen.saveAll(false);
+        net.minecraft.client.Minecraft.getInstance().setScreen(PrivacyToolsScreen.create(create(parentScreen)));
+    }
+
     /** Extract the last path segment (after the final '.') from a component id, e.g. "live_hider.live_hider.debug_menu" -> "debug_menu". */
     private static String lastSegment(String id) {
         int dot = id.lastIndexOf('.');
@@ -70,6 +84,7 @@ public final class LiveHiderConfigScreen {
     }
 
     public static Screen create(Screen parent) {
+        PrivacyShield.protectConfiguration();
         parentScreen = parent;
         LiveHiderConfig config = LiveHiderConfig.get();
         ConfigBuilder builder = ConfigBuilder.create()
@@ -86,6 +101,29 @@ public final class LiveHiderConfigScreen {
 
         // ---- General / redaction + skin mode ----
         ConfigCategory general = builder.getOrCreateCategory(t("live_hider.category.general"));
+        general.addEntry(e.startBooleanToggle(t("live_hider.shield.enabled"), config.protectConfigUi)
+            .setDefaultValue(true).setTooltip(t("live_hider.shield.hint"))
+            .setSaveConsumer(v -> config.protectConfigUi = v).build());
+        general.addEntry(new ActionButtonEntry(t("live_hider.shield.resume"), t("live_hider.shield.resume"), () -> {
+            if (activeConfigScreen != null) activeConfigScreen.saveAll(false);
+            PrivacyShield.confirmResume();
+        }));
+        general.addEntry(e.startBooleanToggle(t("live_hider.tools.server_profiles"), config.serverProfiles)
+            .setDefaultValue(false).setTooltip(t("live_hider.tools.server_profiles_hint"))
+            .setSaveConsumer(v -> config.serverProfiles = v).build());
+        general.addEntry(new ActionButtonEntry(t("live_hider.tools.title"), t("live_hider.tools.title"), LiveHiderConfigScreen::openPrivacyTools));
+        general.addEntry(e.startBooleanToggle(t("live_hider.tools.tooltips"), config.redactItemTooltips)
+            .setDefaultValue(false).setSaveConsumer(v -> config.redactItemTooltips = v).build());
+        general.addEntry(e.startBooleanToggle(t("live_hider.tools.container_titles"), config.redactContainerTitles)
+            .setDefaultValue(false).setSaveConsumer(v -> config.redactContainerTitles = v).build());
+        general.addEntry(e.startBooleanToggle(t("live_hider.tools.books"), config.redactBooks)
+            .setDefaultValue(false).setSaveConsumer(v -> config.redactBooks = v).build());
+        general.addEntry(e.startBooleanToggle(t("live_hider.sign_filter"), config.filterSignText)
+            .setDefaultValue(true).setTooltip(t("live_hider.sign_filter.tooltip"))
+            .setSaveConsumer(v -> config.filterSignText = v).build());
+        general.addEntry(e.startBooleanToggle(t("live_hider.sign_blank"), config.hideSignText)
+            .setDefaultValue(false).setTooltip(t("live_hider.sign_blank.tooltip"))
+            .setSaveConsumer(v -> config.hideSignText = v).build());
         general.addEntry(e.startBooleanToggle(t("live_hider.redact_enabled"), config.redactEnabled)
             .setDefaultValue(true)
             .setTooltip(t("live_hider.redact_enabled.tooltip"))
@@ -142,6 +180,11 @@ public final class LiveHiderConfigScreen {
             .setDefaultValue(4)
             .setTooltip(t("live_hider.name_digits.tooltip"))
             .setSaveConsumer(v -> config.nameDigits = v)
+            .build());
+        names.addEntry(e.startBooleanToggle(t("live_hider.anonymize_self_name"), config.anonymizeSelfName)
+            .setDefaultValue(true)
+            .setTooltip(t("live_hider.anonymize_self_name.tooltip"))
+            .setSaveConsumer(v -> config.anonymizeSelfName = v)
             .build());
         names.addEntry(e.startStringDropdownMenu(t("live_hider.self_name_mode"), config.selfNameMode)
             .setDefaultValue("HIDE")
@@ -227,6 +270,11 @@ public final class LiveHiderConfigScreen {
             .setTooltip(t("live_hider.scoreboard.enabled_group.tooltip"))
             .build());
         scoreboard.addEntry(e.startTextDescription(t("live_hider.scoreboard.desc")).build());
+        scoreboard.addEntry(e.startBooleanToggle(t("live_hider.scoreboard.diagnostics"), config.scoreboardDiagnostics)
+            .setDefaultValue(false)
+            .setTooltip(t("live_hider.scoreboard.diagnostics.tooltip"))
+            .setSaveConsumer(v -> config.scoreboardDiagnostics = v)
+            .build());
         scoreboard.addEntry(e.startTextDescription(t("live_hider.scoreboard.actions_hint")).build());
         scoreboard.addEntry(e.startTextDescription(t("live_hider.scoreboard.disclaimer")).build());
         for (int i = 0; i < config.scoreboardRules.size(); i++) {
@@ -239,11 +287,19 @@ public final class LiveHiderConfigScreen {
                 .setTooltip(t("live_hider.scoreboard.enabled.tooltip"))
                 .setSaveConsumer(v -> config.scoreboardRules.get(idx).enabled = v)
                 .build());
-            sub.add(e.startTextField(t("live_hider.scoreboard.key"), rule.key)
+            var keyEntry = e.startTextField(t("live_hider.scoreboard.key"), rule.key)
                 .setDefaultValue("")
                 .setTooltip(t("live_hider.scoreboard.key.tooltip"))
                 .setSaveConsumer(v -> config.scoreboardRules.get(idx).key = v)
-                .build());
+                .build();
+            for (var child : keyEntry.children()) {
+                if (child instanceof net.minecraft.client.gui.components.EditBox editBox)
+                    editBox.setMaxLength(Math.max(32768, rule.key.length()));
+            }
+            keyEntry.setValue(rule.key);
+            sub.add(keyEntry);
+            sub.add(new ScoreboardPreviewEntry(keyEntry::getValue));
+            sub.add(e.startTextDescription(t("live_hider.scoreboard.preview.hint")).build());
             sub.add(e.startTextField(t("live_hider.scoreboard.replacement"), rule.replacement)
                 .setDefaultValue("")
                 .setTooltip(t("live_hider.scoreboard.replacement.tooltip"))
@@ -287,6 +343,17 @@ public final class LiveHiderConfigScreen {
         // ---- Overlay (obs-overlay HUD concealer) ----
         ConfigCategory overlayCat = builder.getOrCreateCategory(t("live_hider.category.overlay"));
         overlayCat.addEntry(e.startTextDescription(t("live_hider.overlay.desc")).build());
+        overlayCat.addEntry(new LiveStatusEntry(t("live_hider.preflight.title"),
+            LiveHiderPreflightScreen::overlayStatusText));
+        overlayCat.addEntry(e.startTextDescription(t("live_hider.preflight.open_hint")).build());
+        overlayCat.addEntry(new ActionButtonEntry(t("live_hider.preflight.title"),
+            t("live_hider.preflight.title"), LiveHiderConfigScreen::openPreflight));
+        overlayCat.addEntry(e.startBooleanToggle(t("live_hider.overlay.hide_on_failure"),
+                config.hideHudWhenOverlayUnavailable)
+            .setDefaultValue(false)
+            .setTooltip(t("live_hider.overlay.hide_on_failure.tooltip"))
+            .setSaveConsumer(v -> config.hideHudWhenOverlayUnavailable = v)
+            .build());
         overlayCat.addEntry(e.startBooleanToggle(t("live_hider.overlay.hide_all_screens"), config.hideAllScreens)
             .setDefaultValue(false)
             .setTooltip(t("live_hider.overlay.hide_all_screens.tooltip"))

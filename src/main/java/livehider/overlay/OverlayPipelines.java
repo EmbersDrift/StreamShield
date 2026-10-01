@@ -6,9 +6,7 @@ import com.mojang.blaze3d.pipeline.RenderPipeline.Snippet;
 import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat.Mode;
-import java.lang.reflect.Field;
-import java.util.Map;
-import net.minecraft.client.renderer.RenderPipelines;
+import livehider.mixin.accessor.RenderPipelinesAccessor;
 import net.minecraft.resources.Identifier;
 
 /**
@@ -32,15 +30,8 @@ public final class OverlayPipelines {
 
     /** Registers the pipeline on Fabric, which has no loader event for this. */
     public static void registerWithMinecraft() {
-        try {
-            Field field = RenderPipelines.class.getDeclaredField("PIPELINES_BY_LOCATION");
-            field.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            Map<Identifier, RenderPipeline> pipelines = (Map<Identifier, RenderPipeline>) field.get(null);
-            pipelines.put(OVERLAY_COMPOSITE.getLocation(), OVERLAY_COMPOSITE);
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Unable to register StreamShield overlay pipeline", e);
-        }
+        RenderPipelinesAccessor.liveHider$getPipelines()
+            .put(OVERLAY_COMPOSITE.getLocation(), OVERLAY_COMPOSITE);
     }
 
     /**
