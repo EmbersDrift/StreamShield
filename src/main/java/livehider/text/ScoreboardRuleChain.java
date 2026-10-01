@@ -16,8 +16,18 @@ final class ScoreboardRuleChain {
         if (configuredRules != null) {
             for (ScoreboardRule rule : configuredRules) {
                 if (rule != null && rule.enabled && rule.key != null && !rule.key.isEmpty()) {
-                    Pattern pattern = Pattern.compile("(?i)(?<!\\w)" + Pattern.quote(rule.key) + "(?!\\w)");
-                    compiled.add(new CompiledRule(pattern, rule.replacement == null ? "" : rule.replacement));
+                    boolean unicode = rule.key.startsWith(ScoreboardUnicodeKey.PREFIX);
+                    boolean glyph = rule.key.startsWith(ScoreboardUnicodeKey.GLYPH_PREFIX);
+                    var glyphKey = glyph ? ScoreboardUnicodeKey.decodeGlyph(rule.key) : null;
+                    if (glyph && glyphKey == null) continue;
+                    String key = unicode ? ScoreboardUnicodeKey.decode(rule.key) : rule.key;
+                    if (glyph) key = glyphKey.text();
+                    // Malformed advanced keys must never become empty/global matches.
+                    if (key == null || key.isEmpty()) continue;
+                    Pattern pattern = Pattern.compile(unicode || glyph ? Pattern.quote(key)
+                        : "(?i)(?<!\\w)" + Pattern.quote(key) + "(?!\\w)");
+                    compiled.add(new CompiledRule(pattern, rule.replacement == null ? "" : rule.replacement,
+                        glyph ? glyphKey.font() : null));
                 }
             }
         }
@@ -30,11 +40,27 @@ final class ScoreboardRuleChain {
         }
         String result = text;
         for (CompiledRule rule : rules) {
+            // Plain strings carry no font evidence; never guess for font-qualified rules.
+            if (rule.font != null) continue;
             result = rule.pattern.matcher(result).replaceAll(Matcher.quoteReplacement(rule.replacement));
         }
         return result;
     }
 
-    private record CompiledRule(Pattern pattern, String replacement) {
+    private record CompiledRule(Pattern pattern, String replacement, net.minecraft.resources.Identifier font) {
+    }
+
+    net.minecraft.network.chat.Component applyComponent(net.minecraft.network.chat.Component original) {
+        if (original == null || rules.isEmpty()) return original;
+        var result = original;
+        var styled = new StyledScoreboardText(result);
+        for (CompiledRule rule : rules) {
+            var next = styled.replace(rule.pattern, rule.replacement, rule.font);
+            if (next != result) {
+                result = next;
+                styled = new StyledScoreboardText(result);
+            }
+        }
+        return result;
     }
 }

@@ -15,8 +15,8 @@ import org.spongepowered.asm.mixin.injection.At;
  * {@code formatNameForTeam} return, a writable normal method return. In 26.1 the first parameter
  * type widened from {@code PlayerTeam} to {@code Team}.
  *
- * <p>We use {@link SafeText#rewriteScoreboardRecord} which rewrites only the plain-text leaves and
- * preserves the component structure/style, so server resource-pack icon siblings keep rendering as
+ * <p>We use {@link SafeText#rewriteScoreboardRecord} which matches across text leaves and
+ * preserves untouched styles/fonts, so server resource-pack icon siblings keep rendering as
  * their custom glyphs instead of degrading to boxes. {@code formatNameForTeam} is {@code static}, so
  * the handler must be {@code static} too.
  */

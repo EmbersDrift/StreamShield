@@ -27,27 +27,22 @@ public final class SafeText {
     }
 
     public static Component rewriteScoreboard(Component original) {
+        ScoreboardDiagnostics.capture("title", original);
         if (original == null) {
             return original;
         }
-        return rewriteNode(original, Redactor::applyScoreboardToText);
+        return Redactor.applyScoreboardToComponent(original);
     }
 
     /**
-     * Rewrites the text leaves of a sidebar row while retaining sibling styles and fonts, including
-     * server resource-pack icons. Scoreboard rules therefore match within each text leaf.
+     * Matches the visible row across text leaves while retaining untouched styles and icon fonts.
      */
     public static Component rewriteScoreboardRecord(Component original) {
+        ScoreboardDiagnostics.capture("row", original);
         if (original == null) {
             return original;
         }
-        // Per-leaf, structure-preserving rewrite (the same transform the title uses). Each plain-text
-        // leaf is rewritten individually while its sibling components keep their original style/font,
-        // so server resource-pack PUA icon siblings still render as their custom images instead of
-        // degrading to boxes. The earlier whole-row flatten (flatString -> parseLegacyFormatting) is
-        // intentionally dropped: rebuilding the entire row as Component.literal runs stripped the icon
-        // siblings' styling and turned their PUA glyphs into boxes.
-        return rewriteNode(original, Redactor::applyScoreboardToText);
+        return Redactor.applyScoreboardToComponent(original);
     }
 
     /** Name anonymization then content redaction (general surfaces). */
@@ -65,7 +60,7 @@ public final class SafeText {
         return parseLegacyFormatting(input, Style.EMPTY);
     }
 
-    private static MutableComponent parseLegacyFormatting(String input, Style initialStyle) {
+    static MutableComponent parseLegacyFormatting(String input, Style initialStyle) {
         MutableComponent root = Component.empty();
         StringBuilder plain = new StringBuilder();
         // Track the running style so codes accumulate until reset.

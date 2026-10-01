@@ -38,12 +38,20 @@ public final class LiveHiderConfig {
     public boolean showTestIcon;
     // Optional local hiding while the capture-excluded overlay is unavailable.
     public boolean hideHudWhenOverlayUnavailable = false;
+    public boolean protectConfigUi = true;
+    public boolean serverProfiles = false;
+    public boolean redactItemTooltips = false;
+    public boolean redactContainerTitles = false;
+    public boolean redactBooks = false;
 
     // Stream-safe client display: renamed items show their localized vanilla name instead of the custom name.
     public boolean normalizeItemNames = true;
+    public boolean filterSignText = true;
+    public boolean hideSignText = false;
 
     // ---- M2b-1: name anonymization ----
     public boolean anonymizeNames = true;
+    public boolean anonymizeSelfName = true;
     public String nameTemplate = "[Player]#";
     public int nameDigits = 4;
     public String selfNameMode = "HIDE"; // HIDE | CUSTOM | RANDOM
@@ -89,6 +97,8 @@ public final class LiveHiderConfig {
 
     // Diagnostic events only; never log original or replacement text.
     public boolean debugLog = false;
+    // Explicit opt-in: unlike general debugLog, this writes sensitive scoreboard text.
+    public boolean scoreboardDiagnostics = false;
 
     public static void init() {
         Path configPath = getPath();
@@ -152,6 +162,7 @@ public final class LiveHiderConfig {
      * On any parse/IO failure the previous config is kept. Returns true if a reload happened.
      */
     public static boolean reload() {
+        if (livehider.client.PrivacyPresets.isServerActive()) return false;
         Path configPath = getPath();
         if (!Files.exists(configPath)) {
             return false;
@@ -175,6 +186,8 @@ public final class LiveHiderConfig {
         Redactor.setup();
         livehider.text.NameAnonymizer.invalidateDisplayNameCache();
         livehider.text.NameAnonymizer.refreshFromConnection();
+        livehider.text.NameAnonymizer.refreshChatDisplay();
+        livehider.text.ScoreboardDiagnostics.configure(INSTANCE.scoreboardDiagnostics);
         return true;
     }
 
@@ -191,8 +204,9 @@ public final class LiveHiderConfig {
             Path configPath = getPath();
             Files.createDirectories(configPath.getParent());
             try (BufferedWriter writer = Files.newBufferedWriter(configPath)) {
-                new GsonBuilder().setPrettyPrinting().create().toJson(get(), writer);
+                new GsonBuilder().setPrettyPrinting().create().toJson(livehider.client.PrivacyPresets.globalSnapshot(), writer);
             }
+            livehider.client.PrivacyPresets.saveActive();
             // Do not let the polling watcher replace the live config with an identical copy while
             // a Cloth Config screen still holds this instance for follow-up rule actions.
             markConfigWatcherCurrentFileState();
@@ -200,6 +214,8 @@ public final class LiveHiderConfig {
             Redactor.setup();
             livehider.text.NameAnonymizer.invalidateDisplayNameCache();
             livehider.text.NameAnonymizer.refreshFromConnection();
+            livehider.text.NameAnonymizer.refreshChatDisplay();
+            livehider.text.ScoreboardDiagnostics.configure(get().scoreboardDiagnostics);
         } catch (IOException e) {
             LiveHider.LOGGER.error("Failed to save config", e);
         }
@@ -237,7 +253,7 @@ public final class LiveHiderConfig {
     }
 
     /** Keep manually edited or older JSON configurations safe to consume after loading. */
-    private void normalize() {
+    public void normalize() {
         if (overlayComponents == null) overlayComponents = new HashMap<>();
         if (autoHideComponents == null) autoHideComponents = new HashMap<>();
         if (overlayScreensList == null) overlayScreensList = new HashMap<>();
@@ -295,5 +311,13 @@ public final class LiveHiderConfig {
             }
         }
         return false;
+    }
+
+    public static void refreshPrivacyState() {
+        get().updateCache();
+        Redactor.setup();
+        livehider.text.NameAnonymizer.invalidateDisplayNameCache();
+        livehider.text.NameAnonymizer.refreshFromConnection();
+        livehider.text.NameAnonymizer.refreshChatDisplay();
     }
 }

@@ -46,6 +46,7 @@ public final class LiveHiderPreflightScreen {
     }
 
     public static Screen create(Screen parent) {
+        PrivacyShield.protectConfiguration();
         ConfigBuilder builder = ConfigBuilder.create().setParentScreen(parent)
             .setTitle(t("title")).setDoesConfirmSave(false);
         ConfigEntryBuilder entries = builder.entryBuilder();

@@ -13,19 +13,30 @@ import org.lwjgl.glfw.GLFW;
  */
 public final class LiveHiderKeybinds {
     private static KeyMapping revealKey;
+    private static KeyMapping configKey;
+    private static KeyMapping emergencyKey;
 
     private LiveHiderKeybinds() {
     }
 
     public static void register() {
+        KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("live_hider", "keybinds"));
+        emergencyKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+            "key.live_hider.emergency", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_F9, category));
+        configKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+            "key.live_hider.open_config", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_F8, category));
         revealKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.live_hider.reveal",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_LEFT_ALT,
-            KeyMapping.Category.register(Identifier.fromNamespaceAndPath("live_hider", "keybinds"))
+            category
         ));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             NameAnonymizer.setRevealInput(revealKey.isDown());
+            while (emergencyKey.consumeClick()) PrivacyShield.toggleEmergency();
+            while (configKey.consumeClick()) {
+                if (client.screen == null) client.setScreen(LiveHiderConfigScreen.create(null));
+            }
         });
     }
 }

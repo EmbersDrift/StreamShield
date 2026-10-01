@@ -9,7 +9,6 @@ import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import java.io.Closeable;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
@@ -17,6 +16,7 @@ import livehider.component.IOverlayComponent;
 import livehider.LiveHider;
 import livehider.LiveHiderConfig;
 import livehider.mixin.accessor.GuiRendererAccessor;
+import livehider.mixin.accessor.FabricGuiRendererAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.render.GuiRenderer;
@@ -38,6 +38,9 @@ public class OverlayRenderer implements Closeable {
     private final GuiRenderState overlayGuiState = new GuiRenderState();
     private GuiGraphicsExtractor overlayGuiGraphics;
     private GuiRenderer overlayGuiRenderer;
+    private final HitboxOverlay hitboxOverlay = new HitboxOverlay();
+
+    public HitboxOverlay getHitboxOverlay() { return this.hitboxOverlay; }
 
     public OverlayRenderer() {
         OverlayHook.init();
@@ -60,14 +63,20 @@ public class OverlayRenderer implements Closeable {
         try {
             if (this.overlayGuiRenderer != null) {
                 // Fabric borrows vanilla's PiP renderers. Never close those shared instances.
-                ((GuiRendererAccessor) this.overlayGuiRenderer).setPictureInPictureRenderers(Map.of());
+                if (!NEOFORGE) {
+                    ((FabricGuiRendererAccessor) this.overlayGuiRenderer).setPictureInPictureRenderers(Map.of());
+                }
                 this.overlayGuiRenderer.close();
                 this.overlayGuiRenderer = null;
             }
         } finally {
-            if (this.overlayFramebuffer != null) {
-                this.overlayFramebuffer.object.destroyBuffers();
-                this.overlayFramebuffer = null;
+            try {
+                this.hitboxOverlay.close();
+            } finally {
+                if (this.overlayFramebuffer != null) {
+                    this.overlayFramebuffer.object.destroyBuffers();
+                    this.overlayFramebuffer = null;
+                }
             }
         }
     }
@@ -107,9 +116,10 @@ public class OverlayRenderer implements Closeable {
             // records. Construct reflectively so the shared overlay code remains binary-compatible
             // with Fabric; PiP renderers are intentionally omitted on NeoForge because they are
             // unrelated to the HUD components StreamShield redirects.
+            GuiRendererAccessor access = (GuiRendererAccessor) copyFrom;
             List<?> pipRenderers = NEOFORGE
                 ? List.of()
-                : ((Map<?, ?>) getField(copyFrom, "pictureInPictureRenderers")).values().stream().toList();
+                : ((FabricGuiRendererAccessor) copyFrom).getPictureInPictureRenderers().values().stream().toList();
             Constructor<GuiRenderer> constructor = GuiRenderer.class.getConstructor(
                 GuiRenderState.class,
                 net.minecraft.client.renderer.MultiBufferSource.BufferSource.class,
@@ -119,9 +129,9 @@ public class OverlayRenderer implements Closeable {
             );
             this.overlayGuiRenderer = constructor.newInstance(
                 this.overlayGuiState,
-                getField(copyFrom, "bufferSource"),
-                getField(copyFrom, "submitNodeCollector"),
-                getField(copyFrom, "featureRenderDispatcher"),
+                access.getBufferSource(),
+                access.getSubmitNodeCollector(),
+                access.getFeatureRenderDispatcher(),
                 pipRenderers
             );
         } catch (ReflectiveOperationException e) {
@@ -137,12 +147,6 @@ public class OverlayRenderer implements Closeable {
         } catch (ClassNotFoundException ignored) {
             return false;
         }
-    }
-
-    private static Object getField(GuiRenderer renderer, String name) throws ReflectiveOperationException {
-        Field field = GuiRenderer.class.getDeclaredField(name);
-        field.setAccessible(true);
-        return field.get(renderer);
     }
 
     public RenderTarget getGuiRenderTarget() {
@@ -182,6 +186,7 @@ public class OverlayRenderer implements Closeable {
     }
 
     public void onResolutionChanged(Minecraft client) {
+        this.hitboxOverlay.resize(client.getWindow().getWidth(), client.getWindow().getHeight());
         if (this.overlayFramebuffer != null) {
             this.overlayFramebuffer.object.resize(client.getWindow().getWidth(), client.getWindow().getHeight());
         }
@@ -222,6 +227,7 @@ public class OverlayRenderer implements Closeable {
     }
 
     public void beginFrame() {
+        this.hitboxOverlay.beginFrame();
         if (this.overlayFramebuffer != null) {
             clearFramebuffer(this.overlayFramebuffer.object);
             this.resetGuiExtraction();
@@ -237,6 +243,10 @@ public class OverlayRenderer implements Closeable {
     }
 
     public void renderFrame() {
+        if (!this.closed && LiveHider.getIsInitialized()) {
+            RenderTarget hitboxes = this.hitboxOverlay.takeFrame();
+            if (hitboxes != null) renderQuad(hitboxes);
+        }
         if (!this.closed && LiveHider.getIsInitialized() && this.overlayFramebuffer != null && this.overlayFramebuffer.dirty) {
             this.overlayFramebuffer.dirty = false;
             renderQuad(this.overlayFramebuffer.object);

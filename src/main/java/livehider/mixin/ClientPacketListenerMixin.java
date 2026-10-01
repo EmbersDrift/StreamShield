@@ -20,6 +20,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class ClientPacketListenerMixin {
     @Inject(method = "handleLogin(Lnet/minecraft/network/protocol/game/ClientboundLoginPacket;)V", at = @At("RETURN"))
     private void onJoin(ClientboundLoginPacket pkt, CallbackInfo ci) {
+        livehider.text.ScoreboardSamples.clear();
         NameAnonymizer.resetSession();
         RandomSkinManager.resetSessionAssignments();
         NameAnonymizer.refreshFromConnection();

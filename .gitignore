@@ -5,6 +5,10 @@ out/
 
 # --- Git worktrees (parallel MC-version checkouts live under .worktrees/) ---
 .worktrees/
+.gitee-fix/
+
+# --- Game/launcher logs (never part of the build) ---
+logs/
 
 # --- Personal local skin library (user's own LittleSkin downloads; not part of the build) ---
 local-skin-library/

@@ -171,7 +171,25 @@ public final class Redactor {
         return result;
     }
 
-    /** Apply the ordered scoreboard chain rules to a string; result of each rule feeds the next. */
+    /** Match the visible row across styled runs, retaining untouched glyph fonts and colors. */
+    public static net.minecraft.network.chat.Component applyScoreboardToComponent(net.minecraft.network.chat.Component original) {
+        LiveHiderConfig config = LiveHiderConfig.get();
+        if (original == null || config == null) return original;
+        var result = config.scoreboardEnabled ? scoreboardRules.applyComponent(original) : original;
+        if (NameAnonymizer.isActive()) {
+            var styled = new StyledScoreboardText(result);
+            String plain = styled.text();
+            String anonymous = NameAnonymizer.applyExact(plain);
+            if (!anonymous.equals(plain)) {
+                result = styled.replace(Pattern.compile("\\A" + Pattern.quote(plain) + "\\z"), anonymous);
+            }
+        }
+        if (config.debugLog && result != original) {
+            LiveHider.LOGGER.info("[LiveHider][scoreboard] Rewrote rendered text (content omitted)");
+        }
+        return result;
+    }
+
     private static String applyScoreboardRules(String text, LiveHiderConfig config) {
         if (config == null || config.scoreboardRules == null || !config.scoreboardEnabled) {
             return text;

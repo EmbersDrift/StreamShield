@@ -68,3 +68,18 @@ afterEvaluate {
         remap.archiveFileName = "[${project.minecraft_version}]${project.archives_name}-${project.version}-fabric.jar"
     }
 }
+
+// Isolated smoke launch of the distributed 26.1 jar; never uses the user's game directory.
+configurations { productionSmokeMods { transitive = false } }
+dependencies {
+    productionSmokeMods "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    productionSmokeMods "dev.architectury:architectury-fabric:${project.architectury_version}"
+    productionSmokeMods "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}"
+}
+tasks.register('prodClient', net.fabricmc.loom.task.prod.ClientProductionRunTask) {
+    mods.from(tasks.named('jar').flatMap { it.archiveFile })
+    mods.from(configurations.productionSmokeMods)
+    runDir = layout.buildDirectory.dir('production-smoke')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    programArgs.addAll('--username', 'StreamShieldTest', '--accessToken', '0')
+}

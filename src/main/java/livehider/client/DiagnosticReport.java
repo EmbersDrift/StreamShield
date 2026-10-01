@@ -12,18 +12,19 @@ final class DiagnosticReport {
         "WAITING", "INITIALIZING", "READY", "FAILED", "UNSUPPORTED", "CLOSED");
     private static final Set<String> FAILURE_CODES = Set.of(
         "NONE", "UNSUPPORTED_PLATFORM", "INITIALIZATION_FAILED", "FRAME_PREPARE_FAILED",
-        "GUI_RENDER_FAILED", "COMPOSITE_FAILED", "RESIZE_FAILED", "RESOURCE_RELOAD_FAILED",
+        "GUI_RENDER_FAILED", "HITBOX_RENDER_FAILED", "COMPOSITE_FAILED", "RESIZE_FAILED", "RESOURCE_RELOAD_FAILED",
         "MH_INITIALIZE_FAILED", "MH_CREATE_FAILED", "MH_ENABLE_FAILED", "MH_REMOVE_FAILED",
         "NATIVE_LIBRARY_FAILED", "NATIVE_SYMBOL_MISSING");
     private static final String[] SETTINGS = {
         "configurationAvailable", "anonymizeNames", "sanitizeChatInput", "redactEnabled",
+        "filterSignText", "hideSignText",
         "autoGrabServer", "redactPresetEnabled", "redactStrictPresetEnabled", "normalizeItemNames",
         "scoreboardEnabled", "hideAllScreens", "overlayHandledScreensEnabled",
         "hideHudWhenOverlayUnavailable", "showTestIcon", "debugLog"
     };
     private static final String[] HUD_KEYS = {
         "debug_menu", "chat", "chat_bar", "player_list", "subtitles", "scoreboards",
-        "actionbar", "title_subtitle", "effects", "main_hud"
+        "actionbar", "title_subtitle", "effects", "main_hud", "hitboxes"
     };
 
     private DiagnosticReport() {}
@@ -110,4 +111,3 @@ final class DiagnosticReport {
         return result;
     }
 }
-

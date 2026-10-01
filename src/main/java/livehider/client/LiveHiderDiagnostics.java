@@ -27,7 +27,7 @@ public final class LiveHiderDiagnostics {
     public enum HudComponent {
         DEBUG_MENU("debug_menu"), CHAT("chat"), CHAT_BAR("chat_bar"), PLAYER_LIST("player_list"),
         SUBTITLES("subtitles"), SCOREBOARDS("scoreboards"), ACTIONBAR("actionbar"),
-        TITLE_SUBTITLE("title_subtitle"), EFFECTS("effects"), MAIN_HUD("main_hud");
+        TITLE_SUBTITLE("title_subtitle"), EFFECTS("effects"), MAIN_HUD("main_hud"), HITBOXES("hitboxes");
 
         private final String key;
 
@@ -47,6 +47,7 @@ public final class LiveHiderDiagnostics {
                 case TITLE_SUBTITLE -> AllDefaultOverlayComponents.titleSubtitle;
                 case EFFECTS -> AllDefaultOverlayComponents.effects;
                 case MAIN_HUD -> AllDefaultOverlayComponents.mainHud;
+                case HITBOXES -> AllDefaultOverlayComponents.hitboxes;
             };
         }
     }
@@ -111,6 +112,8 @@ public final class LiveHiderDiagnostics {
             settings.addProperty("anonymizeNames", config.anonymizeNames);
             settings.addProperty("sanitizeChatInput", config.sanitizeChatInput);
             settings.addProperty("redactEnabled", config.redactEnabled);
+            settings.addProperty("filterSignText", config.filterSignText);
+            settings.addProperty("hideSignText", config.hideSignText);
             settings.addProperty("autoGrabServer", config.autoGrabServer);
             settings.addProperty("redactPresetEnabled", config.redactPresetEnabled);
             settings.addProperty("redactStrictPresetEnabled", config.redactStrictPresetEnabled);

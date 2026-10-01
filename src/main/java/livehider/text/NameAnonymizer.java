@@ -45,6 +45,20 @@ public final class NameAnonymizer {
     /** Drop render-path display-name results after a configuration reload/save. */
     public static void invalidateDisplayNameCache() {
         displayNameCache.clear();
+        map.clear();
+        rebuildReplacements();
+    }
+
+    private static NamePrivacyPolicy policy(LiveHiderConfig config) {
+        return new NamePrivacyPolicy(config.anonymizeSelfName, config.anonymizeNames, config.sanitizeChatInput);
+    }
+
+    /** Rebuild visible chat from original history after saving/reloading privacy settings. */
+    public static void refreshChatDisplay() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null) mc.execute(() -> {
+            if (mc.gui != null) mc.gui.getChat().rescaleChat();
+        });
     }
 
     /** Register a player's real name so it can be anonymized everywhere it is rendered. */
@@ -63,7 +77,7 @@ public final class NameAnonymizer {
         // name tags/TAB additionally use applySelfMode for their null/display-component behavior.
         if (isOwnRealName(clean)) {
             ownName = clean;
-            String replacement = selfNameReplacement(config, clean, id);
+            String replacement = policy(config).replacement(true, () -> selfNameReplacement(config, clean, id));
             String previous = replacement == null ? map.remove(clean) : map.put(clean, replacement);
             if (!Objects.equals(previous, replacement)) {
                 displayNameCache.clear();
@@ -72,8 +86,9 @@ public final class NameAnonymizer {
             return;
         }
         // Recompute on configuration refresh too; the salt keeps aliases stable within this session.
-        String replacement = anonymousReplacement(config, clean, id);
-        if (!Objects.equals(map.put(clean, replacement), replacement)) {
+        String replacement = policy(config).replacement(false, () -> anonymousReplacement(config, clean, id));
+        String previous = replacement == null ? map.remove(clean) : map.put(clean, replacement);
+        if (!Objects.equals(previous, replacement)) {
             // A newly known player can appear inside another player's decorated nickname.
             displayNameCache.clear();
             rebuildReplacements();
@@ -83,10 +98,10 @@ public final class NameAnonymizer {
     /** True when {@code name} is the local player's own real (profile) name. */
     private static boolean isOwnRealName(String name) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.player == null || mc.player.getGameProfile() == null) {
+        if (mc == null) {
             return false;
         }
-        String own = mc.player.getGameProfile().name();
+        String own = mc.player != null ? mc.player.getGameProfile().name() : mc.getUser().getName();
         return own != null && own.equalsIgnoreCase(name);
     }
 
@@ -101,7 +116,7 @@ public final class NameAnonymizer {
         if ("CUSTOM".equalsIgnoreCase(config.selfNameMode)) {
             return config.selfCustomName != null ? config.selfCustomName : "";
         }
-        return anonymousReplacement(config, realName, id);
+        return "RANDOM".equalsIgnoreCase(config.selfNameMode) ? anonymousReplacement(config, realName, id) : null;
     }
 
     private static String anonymousReplacement(LiveHiderConfig config, String name, UUID id) {
@@ -122,7 +137,7 @@ public final class NameAnonymizer {
         return active
             && config != null
             && !map.isEmpty()
-            && (config.anonymizeNames || hasSelfReplacement());
+            && (config.anonymizeNames || (config.anonymizeSelfName && hasSelfReplacement()));
     }
 
     public static void setRevealInput(boolean value) {
@@ -140,12 +155,14 @@ public final class NameAnonymizer {
     }
 
     /**
-     * Sanitizes a chat input field independently of the global name-anonymization display mode.
+     * Sanitizes chat input only for identities whose master switch is enabled.
      * This deliberately affects known player names only; generic redaction is not applied to text
      * that the player is about to send.
      */
     public static String applyToChatInput(String text) {
-        return applyNames(text, true);
+        LiveHiderConfig config = LiveHiderConfig.get();
+        if (config == null || !policy(config).chatEnabled() || revealInput) return text;
+        return applyNames(text, config.anonymizeNames);
     }
 
     private static boolean hasSelfReplacement() {
@@ -157,8 +174,9 @@ public final class NameAnonymizer {
         if (text == null || !active || map.isEmpty() || (!includeAllNames && !hasSelfReplacement())) {
             return text;
         }
-        String result = replacements.replace(text, includeAllNames);
         LiveHiderConfig config = LiveHiderConfig.get();
+        if (config == null) return text;
+        String result = replacements.replace(text, includeAllNames && config.anonymizeNames, config.anonymizeSelfName);
         if (config != null && config.debugLog && !result.equals(text)) {
             LiveHider.LOGGER.info("[LiveHider][name] Rewrote rendered text (content omitted)");
         }
@@ -177,7 +195,7 @@ public final class NameAnonymizer {
         LiveHiderConfig config = LiveHiderConfig.get();
         // A self-name replacement keeps the anonymizer active even when global anonymization is
         // disabled. In that mode, exact scoreboard rows may rewrite the local player only.
-        return config == null ? text : replacements.replaceExact(text, config.anonymizeNames);
+        return config == null ? text : replacements.replaceExact(text, config.anonymizeNames, config.anonymizeSelfName);
     }
 
     /**
@@ -192,7 +210,7 @@ public final class NameAnonymizer {
         }
         String stripped = LegacyFormatCodes.strip(text);
         LiveHiderConfig config = LiveHiderConfig.get();
-        String result = config == null ? stripped : replacements.replaceExact(stripped, config.anonymizeNames);
+        String result = config == null ? stripped : replacements.replaceExact(stripped, config.anonymizeNames, config.anonymizeSelfName);
         return result.equals(stripped) ? text : result;
     }
 
@@ -202,6 +220,7 @@ public final class NameAnonymizer {
         if (mc == null || mc.player == null) {
             return;
         }
+        register(mc.player.getGameProfile().name(), mc.player.getUUID());
         if (mc.player.connection != null) {
             Collection<PlayerInfo> players = mc.player.connection.getOnlinePlayers();
             for (PlayerInfo info : players) {
@@ -210,7 +229,7 @@ public final class NameAnonymizer {
         }
         if (mc.level != null) {
             for (net.minecraft.world.entity.player.Player entity : mc.level.players()) {
-                register(entity.getName().getString(), entity.getUUID());
+                register(entity.getGameProfile().name(), entity.getUUID());
             }
         }
     }
@@ -220,12 +239,10 @@ public final class NameAnonymizer {
      * players' nametags. Returns null to hide the nametag entirely.
      */
     public static Component applySelfMode(Component name, boolean isSelf) {
+        LiveHiderConfig config = LiveHiderConfig.get();
+        if (config == null || !policy(config).enabled(isSelf)) return name;
         if (!isSelf) {
             return SafeText.rewrite(name);
-        }
-        LiveHiderConfig config = LiveHiderConfig.get();
-        if (config == null) {
-            return name;
         }
         if ("HIDE".equalsIgnoreCase(config.selfNameMode)) {
             return null;
@@ -251,6 +268,8 @@ public final class NameAnonymizer {
         if (name == null || playerId == null) {
             return name;
         }
+        LiveHiderConfig config = LiveHiderConfig.get();
+        if (config == null || !policy(config).enabled(isSelf)) return name;
         DisplayNameCacheEntry cached = displayNameCache.get(playerId);
         if (cached != null && cached.source.equals(name) && cached.isSelf == isSelf) {
             return cached.result;

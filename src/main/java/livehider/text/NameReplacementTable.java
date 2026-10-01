@@ -41,19 +41,31 @@ final class NameReplacementTable {
     }
 
     String replace(String text, boolean includeOtherPlayers) {
+        return replace(text, includeOtherPlayers, true);
+    }
+
+    String replace(String text, boolean includeOtherPlayers, boolean includeSelf) {
         Pattern pattern = includeOtherPlayers ? allNames : selfName;
         if (text == null || pattern == null) {
             return text;
         }
-        return pattern.matcher(text).replaceAll(match ->
-            Matcher.quoteReplacement(match.group(1) + replacements.get(match.group(2).toLowerCase(Locale.ROOT))));
+        return pattern.matcher(text).replaceAll(match -> {
+            String key = match.group(2).toLowerCase(Locale.ROOT);
+            return Matcher.quoteReplacement(!includeSelf && key.equals(ownName) ? match.group()
+                : match.group(1) + replacements.get(key));
+        });
     }
 
     String replaceExact(String text, boolean includeOtherPlayers) {
+        return replaceExact(text, includeOtherPlayers, true);
+    }
+
+    String replaceExact(String text, boolean includeOtherPlayers, boolean includeSelf) {
         if (text == null) {
             return null;
         }
         String key = text.toLowerCase(Locale.ROOT);
+        if (!includeSelf && key.equals(ownName)) return text;
         if (!includeOtherPlayers && !key.equals(ownName)) {
             return text;
         }

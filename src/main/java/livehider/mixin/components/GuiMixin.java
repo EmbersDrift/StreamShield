@@ -10,7 +10,8 @@ import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
-import org.spongepowered.asm.mixin.injection.Redirect;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 
 /**
  * Redirects scoreboard/actionbar/title/effects/main-HUD onto the overlay target.
@@ -20,12 +21,14 @@ import org.spongepowered.asm.mixin.injection.Redirect;
  */
 @Mixin(Gui.class)
 public class GuiMixin {
-    @Redirect(
+    @WrapOperation(
         method = "extractSelectedItemName(Lnet/minecraft/client/gui/GuiGraphicsExtractor;)V",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;getHoverName()Lnet/minecraft/network/chat/Component;")
     )
-    private Component normalizeSelectedItemName(ItemStack stack) {
-        return ItemNameNormalizer.displayName(stack);
+    private Component normalizeSelectedItemName(ItemStack stack, Operation<Component> original) {
+        // Keep other mods' name hooks in the chain, even when replacing the displayed name.
+        Component name = original.call(stack);
+        return ItemNameNormalizer.shouldNormalize(stack) ? ItemNameNormalizer.displayName(stack) : name;
     }
 
     @ModifyVariable(

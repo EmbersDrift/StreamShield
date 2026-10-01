@@ -38,6 +38,8 @@ public class MinecraftMixin {
     @Inject(method = "runTick(Z)V", at = @At("HEAD"))
     private void onRender(boolean tick, CallbackInfo ci) {
         LiveHider.beginOverlayFrame();
+        livehider.client.PrivacyShield.checkAvailability();
+        livehider.client.PrivacyPresets.tick();
     }
 
     @Inject(method = "close()V", at = @At("HEAD"))

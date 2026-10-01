@@ -26,6 +26,9 @@ sourceSets {
         resources.srcDir '../src/main/resources'
     }
     test.java.srcDir '../src/test/java'
+    // ModDev attaches Minecraft libraries to main; shared unit tests need the same classes.
+    test.compileClasspath += main.compileClasspath
+    test.runtimeClasspath += main.runtimeClasspath
 }
 
 neoForge {

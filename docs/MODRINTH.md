@@ -7,11 +7,11 @@ Available for **Fabric** and **NeoForge** on Minecraft **1.21.11** and **26.1.x*
 ## Highlights
 
 - **Player-name privacy** — replaces other player names with stable, per-session aliases across name tags, TAB, chat, and scoreboards.
-- **Self-name modes** — hide your own name, use a custom formatted nickname, keep your real name, or use a random alias. Your chosen self-name mode takes priority everywhere.
-- **Chat-input sanitization** — optionally hides known player names while you type without changing the message actually sent to the server.
+- **Self-name modes** — hide your own name, use a custom formatted nickname, keep your real name, or use a random alias. Self and other-player anonymization have independent master switches; disabling either also disables its chat-input replacements.
+- **Chat-input sanitization** — optionally hides known player names while you type, subject to the self/other-player master switches, without changing the message sent to the server.
 - **Text redaction** — hides configured words, server addresses, server names, and optional strict safety-list terms in rendered text.
 - **Scoreboard rules** — create ordered match-and-replace rules with enable, add, delete, and move controls.
-- **Localized item-name normalization** — renamed items display their normal localized Minecraft name on your client only; item data, anvil input, and server behavior are unchanged.
+- **Localized item-name normalization** — items display the name resolved from their native translation key, including active resource-pack translations; item data, anvil input, and server behavior are unchanged.
 - **Skin obfuscation** — render players with Steve, or assign configurable substitute skins from a Mojang-account ID pool.
 - **OBS overlay** — redirects selected HUD components, including chat, TAB, scoreboards, titles, effects, hotbar, health, armor, hunger, air, vehicle health, and experience, away from OBS capture while keeping them visible to you. Windows only.
 
@@ -32,6 +32,12 @@ Choose the jar matching both your Minecraft version and mod loader.
 Mod Menu is optional on Fabric and provides a convenient **Configure** button. The OBS overlay is Windows-only and is intended for OBS Game Capture; test your capture setup before streaming.
 
 ## Usage
+
+### Hitboxes hidden from OBS
+
+On Windows, enable the OBS overlay and **Hide hitboxes from OBS**, then press **F3+B** to show entity hitboxes. This setting is off by default and requires no Streamproof installation. Only entity hitbox debug geometry is routed to the overlay; players and held items stay in the normal world render.
+
+Check OBS **Game Capture** before streaming. Display/window capture is not guaranteed to exclude the overlay. If the overlay is unavailable, hitboxes remain visible normally, including in the capture; turn off F3+B if necessary. Do not enable Streamproof's hitbox-hiding feature at the same time.
 
 Open the mod's Configure screen to manage redaction, names, items, scoreboards, skins, and OBS-overlay behavior.
 

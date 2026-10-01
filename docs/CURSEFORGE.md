@@ -6,7 +6,7 @@ StreamShield is a client-side Fabric mod that helps keep Minecraft streams priva
 
 - Anonymize player names with stable, per-session aliases
 - Configure your own name separately: hide it, set a custom nickname, show the real name, or randomize it
-- Sanitize player names in the chat input independently from global anonymization
+- Sanitize chat input only for identities enabled by the independent self/other-player anonymization switches
 - Redact words, server addresses, and server names in rendered text
 - Create ordered scoreboard replacement rules and move them up/down
 - Show renamed items with their normal localized Minecraft name without changing anvil behavior or item data
