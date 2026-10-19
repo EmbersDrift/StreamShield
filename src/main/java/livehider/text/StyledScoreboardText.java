@@ -6,6 +6,8 @@ import net.minecraft.network.chat.Style;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /** Matches visible text across components while retaining the style/font of every untouched run. */
@@ -45,19 +47,38 @@ final class StyledScoreboardText {
     }
 
     Component replace(Pattern pattern, String replacement, net.minecraft.resources.Identifier font) {
+        return replace(pattern, match -> replacement, font, null);
+    }
+
+    Component replace(Pattern pattern, String replacement, net.minecraft.resources.Identifier font, Pattern protectedNames) {
+        return replace(pattern, match -> replacement, font, protectedNames);
+    }
+
+    Component replace(Pattern pattern, Function<Matcher, String> replacement) {
+        return replace(pattern, replacement, null, null);
+    }
+
+    private Component replace(Pattern pattern, Function<Matcher, String> replacement,
+                              net.minecraft.resources.Identifier font, Pattern protectedNames) {
         var matcher = pattern.matcher(plain);
         MutableComponent result = null;
         int cursor = 0;
         int searchFrom = 0;
         while (matcher.find(searchFrom)) {
-            if (!matchesFont(matcher.start(), matcher.end(), font)) {
+            if (!matchesFont(matcher.start(), matcher.end(), font)
+                || overlapsProtectedName(protectedNames, matcher.start(), matcher.end())) {
                 searchFrom = matcher.start() + Character.charCount(Character.codePointAt(plain, matcher.start()));
+                continue;
+            }
+            String value = replacement.apply(matcher);
+            if (value == null || value.equals(matcher.group())) {
+                searchFrom = matcher.end();
                 continue;
             }
             if (result == null) result = Component.empty();
             appendSlice(result, cursor, matcher.start());
             Style style = styleAt(matcher.start());
-            result.append(SafeText.parseLegacyFormatting(replacement, style));
+            result.append(SafeText.parseLegacyFormatting(value, style));
             cursor = matcher.end();
             if (cursor == plain.length()) break;
             searchFrom = cursor > matcher.start() ? cursor : cursor + 1;
@@ -65,6 +86,16 @@ final class StyledScoreboardText {
         if (result == null) return original;
         appendSlice(result, cursor, plain.length());
         return result;
+    }
+
+    private boolean overlapsProtectedName(Pattern protectedNames, int start, int end) {
+        if (protectedNames == null) return false;
+        Matcher names = protectedNames.matcher(plain);
+        while (names.find()) {
+            if (names.start() >= end) break;
+            if (names.end() > start) return true;
+        }
+        return false;
     }
 
     private boolean matchesFont(int start, int end, net.minecraft.resources.Identifier font) {

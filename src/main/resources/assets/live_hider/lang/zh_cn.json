@@ -1,7 +1,7 @@
 {
   "key.live_hider.emergency": "紧急遮罩／确认恢复（游戏内 F9）",
   "live_hider.shield.enabled": "保护本模组配置界面（Windows 游戏采集）",
-  "live_hider.shield.hint": "打开配置即进入保护会话，采集画面为纯色。关闭配置不会自动恢复；游戏内按F9或点击恢复并确认。Overlay失败时阻止私密界面绘制，只显示安全恢复提示。首次直播前必须实测OBS。",
+  "live_hider.shield.hint": "默认关闭。开启并保存后立即进入保护会话，以后打开配置也会自动保护。关闭此选项不会解除当前会话；请在游戏内按 F9 或点击恢复并确认。直播前务必实测 OBS 游戏采集。",
   "live_hider.shield.resume": "关闭私密界面并恢复采集",
   "live_hider.shield.resume_warning": "确认后关闭界面并恢复游戏采集。取消则继续遮罩。请先确认游戏画面可公开。",
   "live_hider.shield.unavailable": "隐私 Overlay 不可用",
@@ -139,7 +139,7 @@
   "live_hider.scoreboard.enabled": "\u542f\u7528",
   "live_hider.scoreboard.enabled.tooltip": "\u8be5\u89c4\u5219\u662f\u5426\u751f\u6548\u3002",
   "live_hider.scoreboard.key": "\u5339\u914d\u8bcd",
-  "live_hider.scoreboard.key.tooltip": "普通文字按单词匹配。高级：填写 unicode:U+E001 或 unicode:U+E001 U+F0001，按码点序列精确匹配（区分大小写，无单词边界）。可从诊断 unicodeMatchKey 复制；替换内容留空即可删除字形。无效高级规则不执行。 字体限定：glyph:server:icons|U+E001，仅匹配该字体的字形；从诊断 glyphMatchKey 复制实际值，下方显示字形预览。",
+  "live_hider.scoreboard.key.tooltip": "普通文字按字面内容匹配所有出现位置，不要求单词边界，英文不区分大小写。高级：填写 unicode:U+E001 或 unicode:U+E001 U+F0001，按码点序列精确匹配（区分大小写）。可从诊断 unicodeMatchKey 复制；替换内容留空即可删除字形。无效高级规则不执行。字体限定：glyph:server:icons|U+E001，仅匹配该字体的字形；从诊断 glyphMatchKey 复制实际值，下方显示字形预览。",
   "live_hider.scoreboard.replacement": "\u66ff\u6362\u8bcd",
   "live_hider.scoreboard.replacement.tooltip": "\u547d\u4e2d\u540e\u66ff\u6362\u6210\u7684\u6587\u672c\u3002",
   "live_hider.scoreboard.add_rule": "\u6dfb\u52a0\u4e00\u6761\u89c4\u5219",

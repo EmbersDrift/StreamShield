@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
+import net.minecraft.network.chat.Component;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -22,9 +23,9 @@ class NameReplacementTableTest {
     }
 
     @Test
-    void playerNamesHaveCaseInsensitiveAsciiUsernameBoundaries() {
+    void playerNamesMatchEveryLiteralOccurrence() {
         NameReplacementTable names = new NameReplacementTable(Map.of("Alice", "SAFE"), null);
-        assertEquals("SAFE (SAFE) @SAFE SAFE玩家 Alice2 xAlice Alice_ _Alice",
+        assertEquals("SAFE (SAFE) @SAFE SAFE玩家 SAFE2 xSAFE SAFE_ _SAFE",
             names.replace("Alice (ALICE) @alice Alice玩家 Alice2 xAlice Alice_ _Alice", true));
     }
 
@@ -43,7 +44,7 @@ class NameReplacementTableTest {
     @Test
     void preservesFormattingAroundNamesWithoutMistakingColorCodeForNamePrefix() {
         NameReplacementTable names = new NameReplacementTable(Map.of("Alice", "SAFE"), null);
-        assertEquals("§a§lSAFE§r x§aAlice §aAlice2", names.replace("§a§lAlice§r x§aAlice §aAlice2", true));
+        assertEquals("§a§lSAFE§r x§aSAFE §aSAFE2", names.replace("§a§lAlice§r x§aAlice §aAlice2", true));
     }
 
     @Test
@@ -63,11 +64,22 @@ class NameReplacementTableTest {
     }
 
     @Test
-    void scoreboardNamesOnlyMatchAnEntireRow() {
+    void exactHelperStillRequiresEntireInput() {
         NameReplacementTable names = new NameReplacementTable(Map.of("Alice", "SAFE"), null);
         assertEquals("SAFE", names.replaceExact("alice", true));
         assertEquals("Alice: 7", names.replaceExact("Alice: 7", true));
         assertEquals(" Alice ", names.replaceExact(" Alice ", true));
+    }
+
+    @Test
+    void scoreboardNamesMatchAcrossStyledLeavesAndKeepOtherText() {
+        var names = new NameReplacementTable(Map.of("Vlyen", "", "Other", "Alias"), "Vlyen");
+        var row = Component.literal("Rank: ").append(Component.literal("Vl"))
+            .append(Component.literal("yen"))
+            .append(Component.literal(" / Other / Vlyen"));
+        assertEquals("Rank:  / Other / ", names.replaceComponent(row, false, true).getString());
+        assertEquals("Rank: Vlyen / Alias / Vlyen", names.replaceComponent(row, true, false).getString());
+        assertEquals("Rank:  / Alias / ", names.replaceComponent(row, true, true).getString());
     }
 
     @Test

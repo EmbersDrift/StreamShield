@@ -7,6 +7,7 @@ import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import me.shedaniel.clothconfig2.api.ConfigScreen;
 import me.shedaniel.clothconfig2.impl.builders.SubCategoryBuilder;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -102,12 +103,16 @@ public final class LiveHiderConfigScreen {
         // ---- General / redaction + skin mode ----
         ConfigCategory general = builder.getOrCreateCategory(t("live_hider.category.general"));
         general.addEntry(e.startBooleanToggle(t("live_hider.shield.enabled"), config.protectConfigUi)
-            .setDefaultValue(true).setTooltip(t("live_hider.shield.hint"))
-            .setSaveConsumer(v -> config.protectConfigUi = v).build());
+            .setDefaultValue(false).setTooltip(t("live_hider.shield.hint"))
+            .setSaveConsumer(v -> {
+                config.protectConfigUi = v;
+                if (v) PrivacyShield.protectConfiguration();
+                // Disabling the preference does not release an already latched session.
+            }).build());
         general.addEntry(new ActionButtonEntry(t("live_hider.shield.resume"), t("live_hider.shield.resume"), () -> {
             if (activeConfigScreen != null) activeConfigScreen.saveAll(false);
             PrivacyShield.confirmResume();
-        }));
+        }, PrivacyShield::active));
         general.addEntry(e.startBooleanToggle(t("live_hider.tools.server_profiles"), config.serverProfiles)
             .setDefaultValue(false).setTooltip(t("live_hider.tools.server_profiles_hint"))
             .setSaveConsumer(v -> config.serverProfiles = v).build());
@@ -171,11 +176,18 @@ public final class LiveHiderConfigScreen {
             .setTooltip(t("live_hider.anonymize_names.tooltip"))
             .setSaveConsumer(v -> config.anonymizeNames = v)
             .build());
-        names.addEntry(e.startTextField(t("live_hider.name_template"), config.nameTemplate)
+        var nameTemplateEntry = e.startTextField(t("live_hider.name_template"), config.nameTemplate)
             .setDefaultValue("[Player]#")
             .setTooltip(t("live_hider.name_template.tooltip"))
             .setSaveConsumer(v -> config.nameTemplate = v)
-            .build());
+            .build();
+        for (var child : nameTemplateEntry.children()) {
+            if (child instanceof EditBox editBox) {
+                editBox.addFormatter((visible, offset) -> NameInputFormatter.format(
+                    editBox.getValue(), visible, offset));
+            }
+        }
+        names.addEntry(nameTemplateEntry);
         names.addEntry(e.startIntField(t("live_hider.name_digits"), config.nameDigits)
             .setDefaultValue(4)
             .setTooltip(t("live_hider.name_digits.tooltip"))
@@ -192,11 +204,18 @@ public final class LiveHiderConfigScreen {
             .setTooltip(t("live_hider.self_name_mode.tooltip"))
             .setSaveConsumer(v -> config.selfNameMode = v)
             .build());
-        names.addEntry(e.startTextField(t("live_hider.self_custom_name"), config.selfCustomName)
+        var selfNameEntry = e.startTextField(t("live_hider.self_custom_name"), config.selfCustomName)
             .setDefaultValue("")
             .setTooltip(t("live_hider.self_custom_name.tooltip"))
             .setSaveConsumer(v -> config.selfCustomName = v)
-            .build());
+            .build();
+        for (var child : selfNameEntry.children()) {
+            if (child instanceof EditBox editBox) {
+                editBox.addFormatter((visible, offset) -> NameInputFormatter.format(
+                    editBox.getValue(), visible, offset));
+            }
+        }
+        names.addEntry(selfNameEntry);
         names.addEntry(e.startBooleanToggle(t("live_hider.sanitize_chat"), config.sanitizeChatInput)
             .setDefaultValue(true)
             .setTooltip(t("live_hider.sanitize_chat.tooltip"))

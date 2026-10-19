@@ -121,7 +121,7 @@ public final class Redactor {
         return config != null && config.redactEnabled;
     }
 
-    /** Build (and cache) a single case-insensitive, word-boundary alternation over all words. */
+    /** Build (and cache) a single case-insensitive literal alternation over all marked text. */
     private static Pattern combinedPattern() {
         if (combinedPattern == null || patternDirty) {
             LiveHiderConfig config = LiveHiderConfig.get();
@@ -131,27 +131,32 @@ public final class Redactor {
             }
             all.addAll(staticWords);
             all.addAll(runtimeWords);
-            StringBuilder sb = new StringBuilder();
-            boolean first = true;
-            // Prefer full addresses/phrases over shorter overlapping entries.
-            List<String> ordered = all.stream().filter(java.util.Objects::nonNull)
-                .sorted(java.util.Comparator.comparingInt(String::length).reversed()
-                    .thenComparing(java.util.Comparator.naturalOrder())).toList();
-            for (String word : ordered) {
-                if (word == null || word.isEmpty()) {
-                    continue;
-                }
-                if (!first) {
-                    sb.append('|');
-                }
-                sb.append("(?<!\\w)").append(Pattern.quote(word)).append("(?!\\w)");
-                first = false;
-            }
-            combinedPattern = first ? null : Pattern.compile("(?i)(?:" + sb + ")");
+            combinedPattern = compileMarkedWords(all);
             replacement = config != null && config.redactReplacement != null ? config.redactReplacement : "***";
             patternDirty = false;
         }
         return combinedPattern;
+    }
+
+    static Pattern compileMarkedWords(Set<String> all) {
+        StringBuilder sb = new StringBuilder();
+        boolean first = true;
+        // Prefer full addresses/phrases over shorter overlapping entries.
+        List<String> ordered = all.stream().filter(java.util.Objects::nonNull)
+            .sorted(java.util.Comparator.comparingInt(String::length).reversed()
+                .thenComparing(java.util.Comparator.naturalOrder())).toList();
+        for (String word : ordered) {
+            if (word.isEmpty()) {
+                continue;
+            }
+            if (!first) {
+                sb.append('|');
+            }
+            sb.append(Pattern.quote(word));
+            first = false;
+        }
+        return first ? null : Pattern.compile("(?:" + sb + ")",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     }
 
     /** Replace every configured/ preset/ file/ runtime word in a plain string with the placeholder. */
@@ -175,79 +180,33 @@ public final class Redactor {
     public static net.minecraft.network.chat.Component applyScoreboardToComponent(net.minecraft.network.chat.Component original) {
         LiveHiderConfig config = LiveHiderConfig.get();
         if (original == null || config == null) return original;
-        var result = config.scoreboardEnabled ? scoreboardRules.applyComponent(original) : original;
-        if (NameAnonymizer.isActive()) {
-            var styled = new StyledScoreboardText(result);
-            String plain = styled.text();
-            String anonymous = NameAnonymizer.applyExact(plain);
-            if (!anonymous.equals(plain)) {
-                result = styled.replace(Pattern.compile("\\A" + Pattern.quote(plain) + "\\z"), anonymous);
+        // Rules must leave original player-name spans intact. Apply names last so a
+        // custom rule cannot consume a real name or rewrite a generated alias.
+        Pattern protectedNames = NameAnonymizer.scoreboardProtectedNames();
+        var result = config.scoreboardEnabled ? scoreboardRules.applyComponent(original, protectedNames) : original;
+        if (config.redactEnabled) {
+            Pattern pattern = combinedPattern();
+            if (pattern != null) {
+                result = new StyledScoreboardText(result).replace(pattern, replacement, null, protectedNames);
             }
         }
+        result = NameAnonymizer.applyScoreboardToComponent(result);
         if (config.debugLog && result != original) {
             LiveHider.LOGGER.info("[LiveHider][scoreboard] Rewrote rendered text (content omitted)");
         }
         return result;
     }
 
-    private static String applyScoreboardRules(String text, LiveHiderConfig config) {
-        if (config == null || config.scoreboardRules == null || !config.scoreboardEnabled) {
-            return text;
-        }
-        return scoreboardRules.apply(text);
-    }
-
-    /**
-     * Scoreboard-specific rewrite, deliberately narrow (the huge safetext preset and the
-     * auto-grabbed server name/IP are NOT applied here, so a sidebar title/line is never
-     * mangled just because it matches a server name). Only two things are done:
-     * (1) the configured keyword-&gt;replacement-word mapping ({@code scoreboardReplacements});
-     * (2) player-name anonymization, but only on an exact whole-string match.
-     * Matching/result are computed on a copy with {@code §} format codes stripped; the original
-     * (formatting intact) is returned when nothing matched.
-     */
+    /** Plain-string compatibility path for assembled scoreboard text. */
     public static String applyScoreboardToText(String text) {
-        if (text == null) {
-            return text;
-        }
-        String stripped = LegacyFormatCodes.strip(text);
-        String result = stripped;
-        LiveHiderConfig config = LiveHiderConfig.get();
-        if (config != null) {
-            // 1. Static-content chain mapping, so a mapped keyword gets its own replacement word.
-            result = applyScoreboardRules(result, config);
-            // 2. Player-name anonymization, exact whole-line only.
-            result = NameAnonymizer.applyExact(result);
-        }
-        if (config != null && config.debugLog && !result.equals(stripped)) {
-            LiveHider.LOGGER.info("[LiveHider][scoreboard] Rewrote rendered text (content omitted)");
-        }
-        // Only rewrite if something actually matched; otherwise keep the original (formatting intact).
-        return result.equals(stripped) ? text : result;
+        if (text == null) return null;
+        var source = net.minecraft.network.chat.Component.literal(text);
+        var result = applyScoreboardToComponent(source);
+        return result == source ? text : result.getString();
     }
 
-    /**
-     * Rewrite one assembled sidebar row line (the raw string that already carries {@code §} colour
-     * codes and possibly PUA icon codepoints). Matching is done on a format-stripped copy so colour
-     * codes don't break word boundaries, but the replacement is applied to the original string so
-     * {@code §} codes and icon codepoints that were not matched are preserved. Applies, in order:
-     * {@code scoreboardReplacements} word mapping, then exact whole-line player-name anonymization.
-     */
+    /** Plain-string compatibility alias for {@link #applyScoreboardToText(String)}. */
     public static String rewriteScoreboardRow(String text) {
-        if (text == null) {
-            return text;
-        }
-        String result = text;
-        LiveHiderConfig config = LiveHiderConfig.get();
-        if (config != null) {
-             // 1. Static-content chain mapping, on the raw string (keeps §/icon codepoints intact).
-            result = applyScoreboardRules(result, config);
-            // 2. Exact whole-line player-name anonymization (tolerant of colour codes).
-            result = NameAnonymizer.applyExactStrip(result);
-        }
-        if (config != null && config.debugLog && !result.equals(text)) {
-            LiveHider.LOGGER.info("[LiveHider][scoreboard-row] Rewrote rendered text (content omitted)");
-        }
-        return result;
+        return applyScoreboardToText(text);
     }
 }

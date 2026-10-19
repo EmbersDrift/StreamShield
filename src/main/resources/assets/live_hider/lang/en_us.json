@@ -1,7 +1,7 @@
 {
   "key.live_hider.emergency": "Emergency shield / confirm resume (F9 in-game)",
   "live_hider.shield.enabled": "Protect StreamShield configuration (Windows Game Capture)",
-  "live_hider.shield.hint": "Entering settings latches a solid capture shield. Closing settings does not resume capture; press F9 in-game or confirm Resume. Overlay failures block private GUI drawing and show safe recovery only. Verify in OBS before streaming.",
+  "live_hider.shield.hint": "Off by default. Enabling and saving starts a shield session; later visits start one automatically. Turning this option off does not release an active session: press F9 in-game or confirm Resume. Verify OBS Game Capture before streaming.",
   "live_hider.shield.resume": "Close private UI and resume capture",
   "live_hider.shield.resume_warning": "Confirm to close this UI and resume game capture. Cancel keeps the shield active. Check that gameplay is safe to show.",
   "live_hider.shield.unavailable": "Privacy overlay unavailable",
@@ -162,7 +162,7 @@
   "live_hider.scoreboard.enabled": "Enabled",
   "live_hider.scoreboard.enabled.tooltip": "Whether this rule is active.",
   "live_hider.scoreboard.key": "Match word",
-  "live_hider.scoreboard.key.tooltip": "Ordinary text uses word boundaries. Advanced: unicode:U+E001 or unicode:U+E001 U+F0001 matches an exact code-point sequence (case-sensitive, no word boundaries). Copy unicodeMatchKey from diagnostics; leave replacement empty to remove glyphs. Invalid advanced keys are ignored. Font-qualified: glyph:server:icons|U+E001 matches only that resource font. Copy actual glyphMatchKey values from diagnostics; a glyph preview is shown below.",
+  "live_hider.scoreboard.key.tooltip": "Ordinary text matches every case-insensitive literal occurrence, including inside longer text. Advanced: unicode:U+E001 or unicode:U+E001 U+F0001 matches an exact code-point sequence (case-sensitive). Copy unicodeMatchKey from diagnostics; leave replacement empty to remove glyphs. Invalid advanced keys are ignored. Font-qualified: glyph:server:icons|U+E001 matches only that resource font. Copy actual glyphMatchKey values from diagnostics; a glyph preview is shown below.",
   "live_hider.scoreboard.replacement": "Replacement",
   "live_hider.scoreboard.replacement.tooltip": "The text substituted for the matched word.",
   "live_hider.scoreboard.add_rule": "Add a rule",

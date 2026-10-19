@@ -27,9 +27,9 @@ class ScoreboardRuleChainTest {
     }
 
     @Test
-    void matchingIsLiteralCaseInsensitiveAndRespectsBoundaries() {
+    void matchingIsLiteralCaseInsensitiveAndMatchesInsideLongerText() {
         ScoreboardRuleChain rules = new ScoreboardRuleChain(List.of(new ScoreboardRule(true, "Rank+", "$1\\safe")));
-        assertEquals("$1\\safe Ranks Rank+2", rules.apply("rANK+ Ranks Rank+2"));
+        assertEquals("$1\\safe Ranks $1\\safe2", rules.apply("rANK+ Ranks Rank+2"));
     }
 
     @Test

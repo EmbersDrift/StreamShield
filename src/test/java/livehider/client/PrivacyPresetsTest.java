@@ -24,6 +24,7 @@ class PrivacyPresetsTest {
     }
     @Test void importedSafetySwitchesAreIgnoredAndNullRulesNormalized() {
         var current = new LiveHiderConfig();
+        current.protectConfigUi = true;
         var candidate = PrivacyPresets.candidate(current, JsonParser.parseString(
             "{\"protectConfigUi\":false,\"scoreboardDiagnostics\":true,\"scoreboardRules\":null,\"redactBooks\":true}").getAsJsonObject());
         assertTrue(candidate.protectConfigUi);
@@ -31,6 +32,9 @@ class PrivacyPresetsTest {
         assertTrue(candidate.redactBooks);
         assertTrue(candidate.scoreboardRules.isEmpty());
         assertFalse(current.redactBooks);
+    }
+    @Test void configurationProtectionIsOptInByDefault() {
+        assertFalse(new LiveHiderConfig().protectConfigUi);
     }
     @Test void malformedSettingsCannotMutateOriginal() {
         var current = new LiveHiderConfig();
