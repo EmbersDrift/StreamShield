@@ -38,7 +38,7 @@ public final class LiveHiderConfig {
     public boolean showTestIcon;
     // Optional local hiding while the capture-excluded overlay is unavailable.
     public boolean hideHudWhenOverlayUnavailable = false;
-    public boolean protectConfigUi = true;
+    public boolean protectConfigUi = false;
     public boolean serverProfiles = false;
     public boolean redactItemTooltips = false;
     public boolean redactContainerTitles = false;

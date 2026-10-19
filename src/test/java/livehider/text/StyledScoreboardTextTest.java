@@ -46,7 +46,7 @@ class StyledScoreboardTextTest {
     }
 
     @Test void multipleMatchesDeletionBoundariesAndLiteralReplacement() {
-        assertEquals("$1\\safe $1\\safe secret2", rewrite(Component.literal("secret SECRET secret2"), "secret", "$1\\safe").getString());
+        assertEquals("$1\\safe $1\\safe $1\\safe2", rewrite(Component.literal("secret SECRET secret2"), "secret", "$1\\safe").getString());
         assertEquals("a  b", rewrite(Component.literal("a secret b"), "secret", "").getString());
     }
 
@@ -54,6 +54,23 @@ class StyledScoreboardTextTest {
         var rules = new ScoreboardRuleChain(List.of(new ScoreboardRule(true, "secret", "&dRank"),
             new ScoreboardRule(true, "Rank", "Tier")));
         assertEquals("Tier", rules.applyComponent(Component.literal("secret")).getString());
+    }
+
+    @Test void playerNameSpansTakePriorityOverScoreboardRules() {
+        var names = new NameReplacementTable(java.util.Map.of("Vlyen", "[Safe]"), "Vlyen");
+        var rules = new ScoreboardRuleChain(List.of(
+            new ScoreboardRule(true, "Vlyen", "rule"),
+            new ScoreboardRule(true, "[Safe]", "overwritten"),
+            new ScoreboardRule(true, "你好", "hidden")));
+        var row = Component.literal("欢迎你好：Vl").append(Component.literal("yen / 你好"));
+        var changed = rules.applyComponent(row, names.activePattern(false, true));
+        assertEquals("欢迎hidden：Vlyen / hidden", changed.getString());
+        assertEquals("欢迎hidden：[Safe] / hidden", names.replaceComponent(changed, false, true).getString());
+    }
+
+    @Test void markedTextMatchesInsideLongerText() {
+        var rules = new ScoreboardRuleChain(List.of(new ScoreboardRule(true, "你好", "X")));
+        assertEquals("A X世界 X", rules.applyComponent(Component.literal("A 你好世界 你好")).getString());
     }
 
     @Test void sourceLegacyCodesAreIgnoredForMatchingButAmpersandsRemainLiteral() {

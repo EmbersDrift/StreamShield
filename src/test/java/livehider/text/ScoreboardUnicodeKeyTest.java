@@ -26,9 +26,9 @@ class ScoreboardUnicodeKeyTest {
             assertEquals("safe", rule(key).apply("safe"));
     }
 
-    @Test void advancedMatchingIsCaseSensitiveAndOrdinaryRulesUnchanged() {
+    @Test void advancedMatchingIsCaseSensitiveAndOrdinaryRulesMatchEveryOccurrence() {
         assertEquals("a", rule("unicode:U+0041").apply("Aa"));
-        assertEquals("foo2 ", rule("foo").apply("foo2 FOO"));
+        assertEquals("2 ", rule("foo").apply("foo2 FOO"));
         assertEquals("", rule("\\uE001").apply("\\uE001"));
     }
 

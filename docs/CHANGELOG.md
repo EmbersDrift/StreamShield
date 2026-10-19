@@ -1,6 +1,23 @@
 # Changelog
 
-## v1.1.3 (Unreleased — OBS acceptance testing required)
+## v1.1.4
+
+### Changed
+
+- Configuration capture protection is now opt-in for new installs. Existing saved preferences are preserved; an active shield still requires explicit confirmation before capture resumes.
+- The two name-privacy text fields render legacy `§` and `&` formatting directly in the input box, hiding the codes as soon as they are complete. The stored value remains unchanged. Scoreboard rule fields are unaffected.
+
+### Fixed
+
+- Marked words replace every literal occurrence in chat and other text, including matches inside longer strings. Scoreboard titles and rows use the same general redaction words, and ordinary scoreboard rules also match every occurrence across styled text.
+- Player-name modes apply to names embedded in scoreboard text. Player-name spans take priority over custom scoreboard rules while unrelated text keeps its formatting and resource-pack fonts.
+- The "resume capture" action is unavailable when no shield session is active. Saving an enabled protection preference arms the shield immediately; disabling it does not silently release an active session.
+
+### Validation
+
+- Fabric and NeoForge builds and unit tests cover Minecraft 1.21.11 and 26.1.2. OBS Game Capture behavior still requires the manual checks in `V1.1.3_ACCEPTANCE.md` before streaming.
+
+## v1.1.3 (OBS acceptance testing required)
 
 ### Added
 

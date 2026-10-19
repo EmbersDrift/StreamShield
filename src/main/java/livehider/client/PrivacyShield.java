@@ -15,9 +15,13 @@ public final class PrivacyShield {
     private static Screen resumeScreen;
     private PrivacyShield() {}
     public static boolean active() { return SESSION.active(); }
-    public static void arm() { SESSION.arm(); resumeScreen = null; }
+    public static void arm() {
+        if (!OverlayHook.isPlatformSupported()) return;
+        SESSION.arm();
+        resumeScreen = null;
+    }
     public static void protectConfiguration() {
-        if (LiveHiderConfig.get().protectConfigUi && OverlayHook.isPlatformSupported()) arm();
+        if (LiveHiderConfig.get().protectConfigUi) arm();
     }
     public static boolean safeDialogVisible() {
         return safeDialog != null && Minecraft.getInstance().screen == safeDialog;
@@ -26,6 +30,7 @@ public final class PrivacyShield {
         if (!active()) arm(); else confirmResume();
     }
     public static void confirmResume() {
+        if (!active()) return;
         safeDialog = new ConfirmScreen(confirmed -> {
             // Never reveal the previous private screen, even for one frame.
             Minecraft.getInstance().setScreen(null);

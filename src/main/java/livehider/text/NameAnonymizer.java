@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * Maps real player names to anonymized {@code [Player]#nnn} names for a single session.
@@ -185,8 +186,8 @@ public final class NameAnonymizer {
 
     /**
      * Replace a string only when it <em>exactly</em> equals a known player name (whole line).
-     * Used by the scoreboard path so a sidebar entry is only anonymized when it is precisely a
-     * player name, never when a name merely appears as a substring.
+     * Retained for callers that explicitly need an exact match. Scoreboard rendering now
+     * uses {@link #applyScoreboardToComponent(Component)} for embedded names as well.
      */
     public static String applyExact(String text) {
         if (text == null || !isActive()) {
@@ -196,6 +197,19 @@ public final class NameAnonymizer {
         // A self-name replacement keeps the anonymizer active even when global anonymization is
         // disabled. In that mode, exact scoreboard rows may rewrite the local player only.
         return config == null ? text : replacements.replaceExact(text, config.anonymizeNames, config.anonymizeSelfName);
+    }
+
+    /** Match every known name in the assembled scoreboard text, including across styled leaves. */
+    public static Component applyScoreboardToComponent(Component source) {
+        if (source == null || !isActive()) return source;
+        LiveHiderConfig config = LiveHiderConfig.get();
+        return replacements.replaceComponent(source, config.anonymizeNames, config.anonymizeSelfName);
+    }
+
+    static Pattern scoreboardProtectedNames() {
+        if (!isActive()) return null;
+        LiveHiderConfig config = LiveHiderConfig.get();
+        return replacements.activePattern(config.anonymizeNames, config.anonymizeSelfName);
     }
 
     /**

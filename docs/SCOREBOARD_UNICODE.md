@@ -7,7 +7,9 @@ Resource packs can draw an entire logo or address using one private-use characte
 3. Copy a key such as `unicode:U+E001` into a scoreboard rule's match field, without JSON quotes. Leave the replacement empty to remove it. Enable the rule and scoreboard rules, then save.
 4. Disable diagnostics after testing. These logs can expose names and server addresses.
 
-Multiple code points are separated by spaces, e.g. `unicode:U+E001 U+F0001`. This matches that consecutive sequence, even across styled components. `U+0020` represents an actual space. Advanced matching is case-sensitive and ignores word boundaries. Malformed advanced keys are ignored. Ordinary keys keep their previous behavior; raw backslash escapes are not decoded.
+Multiple code points are separated by spaces, e.g. `unicode:U+E001 U+F0001`. This matches that consecutive sequence, even across styled components. `U+0020` represents an actual space. Advanced matching is case-sensitive. Ordinary keys match every case-insensitive literal occurrence, including inside longer text. Malformed advanced keys are ignored; raw backslash escapes are not decoded.
+
+General redaction words also apply to scoreboard titles and rows. Player-name modes take precedence over custom scoreboard rules where the source text matches a known player name. If the server inserts actual separator characters between letters, enter the separated text as a rule or use the diagnostic samples to identify its exact characters.
 
 The top-level key represents the sampled visible row; a segment key represents only that segment. Legacy color codes are excluded. Samples marked `truncated` are incomplete; do not treat their keys as complete rows. Empty keys do nothing.
 

@@ -24,8 +24,8 @@ final class ScoreboardRuleChain {
                     if (glyph) key = glyphKey.text();
                     // Malformed advanced keys must never become empty/global matches.
                     if (key == null || key.isEmpty()) continue;
-                    Pattern pattern = Pattern.compile(unicode || glyph ? Pattern.quote(key)
-                        : "(?i)(?<!\\w)" + Pattern.quote(key) + "(?!\\w)");
+                    Pattern pattern = Pattern.compile(Pattern.quote(key),
+                        unicode || glyph ? 0 : Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
                     compiled.add(new CompiledRule(pattern, rule.replacement == null ? "" : rule.replacement,
                         glyph ? glyphKey.font() : null));
                 }
@@ -51,11 +51,15 @@ final class ScoreboardRuleChain {
     }
 
     net.minecraft.network.chat.Component applyComponent(net.minecraft.network.chat.Component original) {
+        return applyComponent(original, null);
+    }
+
+    net.minecraft.network.chat.Component applyComponent(net.minecraft.network.chat.Component original, Pattern protectedNames) {
         if (original == null || rules.isEmpty()) return original;
         var result = original;
         var styled = new StyledScoreboardText(result);
         for (CompiledRule rule : rules) {
-            var next = styled.replace(rule.pattern, rule.replacement, rule.font);
+            var next = styled.replace(rule.pattern, rule.replacement, rule.font, protectedNames);
             if (next != result) {
                 result = next;
                 styled = new StyledScoreboardText(result);

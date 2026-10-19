@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import net.minecraft.network.chat.Component;
+
 /**
  * Immutable name snapshot. A single matcher only visits the original input, so an alias that
  * happens to contain another known player's name is never anonymized a second time.
@@ -16,6 +18,7 @@ final class NameReplacementTable {
     private final Map<String, String> replacements;
     private final Pattern allNames;
     private final Pattern selfName;
+    private final Pattern otherNames;
     private final String ownName;
 
     NameReplacementTable(Map<String, String> replacements, String ownName) {
@@ -32,12 +35,26 @@ final class NameReplacementTable {
         this.allNames = names.isEmpty() ? null : compileNames(names.stream().map(Pattern::quote).toList());
         this.selfName = this.ownName != null && normalized.containsKey(this.ownName)
             ? compileNames(java.util.List.of(Pattern.quote(this.ownName))) : null;
+        var others = names.stream().filter(name -> !name.equals(this.ownName)).toList();
+        this.otherNames = others.isEmpty() ? null : compileNames(others.stream().map(Pattern::quote).toList());
     }
 
     private static Pattern compileNames(java.util.List<String> quotedNames) {
-        // Minecraft profile names contain ASCII letters, digits and underscores.
-        return Pattern.compile("(?<![A-Za-z0-9_])((?:\u00a7[0-9a-fk-or])*)(" + String.join("|", quotedNames) + ")(?![A-Za-z0-9_])",
+        // Names are treated as literal substrings, including inside decorated server text.
+        return Pattern.compile("((?:\u00a7[0-9a-fk-or])*)(" + String.join("|", quotedNames) + ")",
             Pattern.CASE_INSENSITIVE);
+    }
+
+    Pattern activePattern(boolean includeOtherPlayers, boolean includeSelf) {
+        if (includeOtherPlayers) return includeSelf ? allNames : otherNames;
+        return includeSelf ? selfName : null;
+    }
+
+    Component replaceComponent(Component source, boolean includeOtherPlayers, boolean includeSelf) {
+        Pattern pattern = activePattern(includeOtherPlayers, includeSelf);
+        if (source == null || pattern == null) return source;
+        return new StyledScoreboardText(source).replace(pattern, match ->
+            match.group(1) + replacements.get(match.group(2).toLowerCase(Locale.ROOT)));
     }
 
     String replace(String text, boolean includeOtherPlayers) {
@@ -45,14 +62,13 @@ final class NameReplacementTable {
     }
 
     String replace(String text, boolean includeOtherPlayers, boolean includeSelf) {
-        Pattern pattern = includeOtherPlayers ? allNames : selfName;
+        Pattern pattern = activePattern(includeOtherPlayers, includeSelf);
         if (text == null || pattern == null) {
             return text;
         }
         return pattern.matcher(text).replaceAll(match -> {
             String key = match.group(2).toLowerCase(Locale.ROOT);
-            return Matcher.quoteReplacement(!includeSelf && key.equals(ownName) ? match.group()
-                : match.group(1) + replacements.get(key));
+            return Matcher.quoteReplacement(match.group(1) + replacements.get(key));
         });
     }
 
