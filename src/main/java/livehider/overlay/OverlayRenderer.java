@@ -35,6 +35,8 @@ public class OverlayRenderer implements Closeable {
     private boolean closed;
     private boolean framebufferOverridden = false;
     private OverlayFramebuffer overlayFramebuffer;
+    private final OverlayGuiFrame guiFrame = new OverlayGuiFrame();
+    private GuiContext guiContext;
     private final GuiRenderState overlayGuiState = new GuiRenderState();
     private GuiGraphicsExtractor overlayGuiGraphics;
     private GuiRenderer overlayGuiRenderer;
@@ -88,10 +90,9 @@ public class OverlayRenderer implements Closeable {
         clearFramebuffer(simpleFramebuffer);
     }
 
-    private void markOverlayDirty() {
-        if (this.overlayFramebuffer != null) {
-            this.overlayFramebuffer.dirty = true;
-        }
+    /** Called only when the host actually extracts HUD commands, including an empty HUD. */
+    public void markGuiExtraction() {
+        this.guiFrame.extracted();
     }
 
     private static void clearFramebuffer(RenderTarget target) {
@@ -164,6 +165,7 @@ public class OverlayRenderer implements Closeable {
         if (!component.isOverlayEnabled()) {
             return original;
         }
+        this.markGuiExtraction();
         if (component.isHidden()) {
             return DummyGuiGraphics.INSTANCE;
         }
@@ -174,14 +176,15 @@ public class OverlayRenderer implements Closeable {
 
     public void beginDraw() {
         if (this.overlayFramebuffer != null) {
+            if (this.guiFrame.beginDraw()) clearFramebuffer(this.overlayFramebuffer.object);
             this.framebufferOverridden = true;
-            this.markOverlayDirty();
         }
     }
 
     public void endDraw() {
         if (this.overlayFramebuffer != null) {
             this.framebufferOverridden = false;
+            this.guiFrame.endDraw();
         }
     }
 
@@ -189,6 +192,7 @@ public class OverlayRenderer implements Closeable {
         this.hitboxOverlay.resize(client.getWindow().getWidth(), client.getWindow().getHeight());
         if (this.overlayFramebuffer != null) {
             this.overlayFramebuffer.object.resize(client.getWindow().getWidth(), client.getWindow().getHeight());
+            this.guiFrame.invalidate();
         }
     }
 
@@ -229,9 +233,37 @@ public class OverlayRenderer implements Closeable {
     public void beginFrame() {
         this.hitboxOverlay.beginFrame();
         if (this.overlayFramebuffer != null) {
-            clearFramebuffer(this.overlayFramebuffer.object);
+            GuiContext context = this.currentGuiContext();
+            this.guiFrame.beginFrame(!context.equals(this.guiContext));
+            this.guiContext = context;
             this.resetGuiExtraction();
         }
+    }
+
+    /** Cached HUD frames must reuse the last completed target rather than draw an empty one. */
+    public boolean shouldRenderGui() {
+        GuiContext context = this.currentGuiContext();
+        if (!context.equals(this.guiContext)) {
+            this.guiFrame.invalidate();
+            this.guiContext = context;
+        }
+        return this.guiFrame.needsRender() || this.hasOverlayContent();
+    }
+
+    private GuiContext currentGuiContext() {
+        Minecraft minecraft = Minecraft.getInstance();
+        return new GuiContext(minecraft.level, minecraft.screen, minecraft.getOverlay(),
+            minecraft.options.hideGui, minecraft.options.keyPlayerList.isDown(),
+            livehider.client.PrivacyShield.active());
+    }
+
+    private boolean hasOverlayContent() {
+        boolean[] present = {false};
+        this.overlayGuiState.forEachElement(element -> present[0] = true, GuiRenderState.TraverseRange.ALL);
+        this.overlayGuiState.forEachText(text -> present[0] = true);
+        this.overlayGuiState.forEachItem(item -> present[0] = true);
+        this.overlayGuiState.forEachPictureInPicture(picture -> present[0] = true);
+        return present[0];
     }
 
     private void resetGuiExtraction() {
@@ -243,13 +275,17 @@ public class OverlayRenderer implements Closeable {
     }
 
     public void renderFrame() {
-        if (!this.closed && LiveHider.getIsInitialized()) {
-            RenderTarget hitboxes = this.hitboxOverlay.takeFrame();
-            if (hitboxes != null) renderQuad(hitboxes);
-        }
-        if (!this.closed && LiveHider.getIsInitialized() && this.overlayFramebuffer != null && this.overlayFramebuffer.dirty) {
-            this.overlayFramebuffer.dirty = false;
+        // Other windows/contexts can swap too (for example a client's embedded browser).
+        if (this.closed || !LiveHider.getIsInitialized() || !RenderSystem.isOnRenderThread()
+                || org.lwjgl.glfw.GLFW.glfwGetCurrentContext() != Minecraft.getInstance().getWindow().handle()) return;
+        if (!this.currentGuiContext().equals(this.guiContext)) this.guiFrame.invalidate();
+        RenderTarget hitboxes = this.hitboxOverlay.takeFrame();
+        if (hitboxes != null) renderQuad(hitboxes);
+        if (this.overlayFramebuffer != null && this.guiFrame.canPresent()) {
             renderQuad(this.overlayFramebuffer.object);
         }
+    }
+
+    private record GuiContext(Object level, Object screen, Object overlay, boolean hideGui, boolean playerList, boolean shield) {
     }
 }
