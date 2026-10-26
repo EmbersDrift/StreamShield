@@ -76,6 +76,7 @@ public abstract class GameRendererMixin {
         if (LiveHider.getIsInitialized()) {
             OverlayRenderer overlayRenderer = LiveHider.getRenderer();
             assert overlayRenderer != null;
+            if (!overlayRenderer.shouldRenderGui()) return;
             try {
                 GuiRenderer custom = overlayRenderer.getOverlayGuiRenderer(instance);
                 overlayRenderer.beginDraw();

@@ -10,6 +10,8 @@ import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 
@@ -20,6 +22,12 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
  */
 @Mixin(Gui.class)
 public class GuiMixin {
+    @Inject(method = "render(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V", at = @At("TAIL"))
+    private void observeHudExtraction(CallbackInfo ci) {
+        var renderer = LiveHider.getRenderer();
+        if (renderer != null) renderer.markGuiExtraction();
+    }
+
     @WrapOperation(method = "renderSelectedItemName(Lnet/minecraft/client/gui/GuiGraphics;I)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;getHoverName()Lnet/minecraft/network/chat/Component;"))
     private Component normalizeSelectedItemName(ItemStack stack, Operation<Component> original) {
         // Keep other mods' name hooks in the chain, even when replacing the displayed name.

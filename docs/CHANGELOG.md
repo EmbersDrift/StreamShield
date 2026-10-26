@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.1.4.1
+
+### Fixed
+
+- Fix local flickering of redirected TAB, chat and other HUD elements when a client such as Lunar reuses cached HUD frames. Opening the chat input is no longer needed to keep the overlay visible.
+- Clear retained HUD images on empty HUD updates, screen/world changes, TAB visibility changes, F1 and window resizing, preventing stale overlay pixels.
+- Present overlays only on the game's render thread and OpenGL context, avoiding draws into other client windows.
+
+### Validation
+
+- Fabric and NeoForge builds and automated tests cover Minecraft 1.21.11. Local display and OBS Game Capture still require in-game verification, including TAB, unfocused chat, GUI transitions and F1.
+
 ## v1.1.4
 
 ### Changed
